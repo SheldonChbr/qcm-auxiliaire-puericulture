@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QCM auxiliaire de puériculture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Plan : une colonne centrée, outil d'entraînement quotidien ; accueil = tableau de bord, puis écran de question plein cadre */
+  --ink:#1d2b3a;
+  --muted:#5a6878;
+  --paper:#f4f7f6;
+  --card:#ffffff;
+  --line:#d8e1df;
+  --accent:#1f7a72;
+  --accent-soft:#e1f1ee;
+  --good:#2e7d4f; --good-soft:#e3f3e8;
+  --bad:#b8402f; --bad-soft:#fbe7e3;
+  --warn:#b7791f;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e6eeec; --muted:#a3b2b0; --paper:#111a1d; --card:#1a2529; --line:#2c3a3f;
+    --accent:#5cc2b6; --accent-soft:#1c3533;
+    --good:#6fcf97; --good-soft:#18352a; --bad:#f08a78; --bad-soft:#3d1f1a; --warn:#e5b25a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e6eeec; --muted:#a3b2b0; --paper:#111a1d; --card:#1a2529; --line:#2c3a3f;
+  --accent:#5cc2b6; --accent-soft:#1c3533;
+  --good:#6fcf97; --good-soft:#18352a; --bad:#f08a78; --bad-soft:#3d1f1a; --warn:#e5b25a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800}
+h2{font-size:1.25rem;font-weight:600}
+p{margin:0}
+.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-family:var(--display);font-size:1.7rem;font-variant-numeric:tabular-nums}
+.stat span{font-size:.85rem;color:var(--muted)}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 14px}
+button:focus-visible,.opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;padding:14px 20px;font-size:1.05rem}
+:root[data-theme="dark"] .primary{color:#0b1416}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .primary{color:#0b1416}}
+.ghost{background:transparent}
+.seg button[aria-pressed="true"],.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:7px 12px;font-size:.92rem;border-radius:999px}
+.themes{display:flex;flex-direction:column;gap:8px}
+.trow{display:grid;grid-template-columns:1fr 120px 52px;gap:10px;align-items:center;font-size:.95rem}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.trow em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+@media (max-width:560px){.trow{grid-template-columns:1fr 70px 44px}}
+/* écran question */
+.qhead{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.tag{display:inline-block;background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:3px 10px;font-size:.85rem}
+.progress{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .2s}
+.qtext{font-family:var(--display);font-weight:600;font-size:clamp(1.2rem,3.2vw,1.45rem);line-height:1.3}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;text-align:left;padding:13px 14px;border-radius:12px;width:100%}
+.opt .k{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);font-weight:700;font-size:.9rem}
+.opt.ok{background:var(--good-soft);border-color:var(--good)}
+.opt.ok .k{background:var(--good);border-color:var(--good);color:#fff}
+.opt.ko{background:var(--bad-soft);border-color:var(--bad)}
+.opt.ko .k{background:var(--bad);border-color:var(--bad);color:#fff}
+.opt[disabled]{cursor:default}
+.feedback{border-left:5px solid var(--good);background:var(--good-soft);border-radius:10px;padding:12px 14px}
+.feedback.bad{border-color:var(--bad);background:var(--bad-soft)}
+.feedback strong{display:block;margin-bottom:4px}
+.recap li{margin-bottom:10px}
+.recap .ans{color:var(--good);font-weight:700}
+.big{font-family:var(--display);font-size:3rem;font-weight:800;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:.8rem;font-weight:700}
+.pill.due{background:var(--bad-soft);color:var(--bad)}
+.pill.ok{background:var(--good-soft);color:var(--good)}
+.hidden{display:none!important}
+input.field{font:inherit;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);flex:1;min-width:0}
+input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
+.sync{font-size:.82rem;color:var(--muted)}
+.keys{font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main id="app">
+  <section id="lock" class="hidden" style="flex-direction:column;gap:16px">
+    <h1>QCM auxiliaire de puériculture</h1>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <h2>Accès réservé</h2>
+      <p class="muted">Ce QCM s'ouvre avec une clé d'accès. Utilisez le lien complet qui vous a été transmis, ou saisissez la clé ci-dessous. Elle sera retenue sur cet appareil.</p>
+      <form id="lockForm" class="row" autocomplete="off">
+        <input id="lockInput" aria-label="Clé d'accès" class="field" type="text" autocapitalize="off" spellcheck="false" placeholder="Clé d'accès">
+        <button type="submit" class="primary" id="lockBtn">Ouvrir</button>
+      </form>
+      <p class="muted" id="lockMsg" aria-live="polite"></p>
+    </div>
+  </section>
+  <section id="home">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <h1>QCM auxiliaire de puériculture</h1>
+        <p class="muted" id="intro">Chargement des questions…</p>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-top:16px">
+      <div class="stat"><b id="sStreak">0</b><span>jours d'affilée</span></div>
+      <div class="stat"><b id="sToday">0</b><span>réponses aujourd'hui</span></div>
+      <div class="stat"><b id="sMastered">0</b><span>questions maîtrisées</span></div>
+      <div class="stat"><b id="sDue">0</b><span>erreurs à revoir</span></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:14px">
+      <h2>Séance du jour</h2>
+      <p class="muted">Les questions ratées reviennent d'abord, puis celles à réviser, puis des nouvelles. Une bonne réponse espace la question (1, 3, 7, 14, 30 jours) ; une erreur la fait revenir le lendemain.</p>
+      <div class="row seg" role="group" aria-label="Nombre de questions" id="sizeSeg">
+        <span class="muted">Nombre :</span>
+        <button type="button" data-n="10">10</button>
+        <button type="button" data-n="20" aria-pressed="true">20</button>
+        <button type="button" data-n="40">40</button>
+        <button type="button" data-n="80">80</button>
+      </div>
+      <div class="row">
+        <button type="button" class="primary" id="btnDaily" disabled>Commencer la séance</button>
+        <button type="button" id="btnErrors">Revoir mes erreurs</button>
+        <button type="button" id="btnRandom">Tout au hasard</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+      <div class="row" style="justify-content:space-between">
+        <h2>Thèmes</h2>
+        <div class="row">
+          <button type="button" class="ghost" id="btnAll">Tous</button>
+          <button type="button" class="ghost" id="btnNone">Aucun</button>
+        </div>
+      </div>
+      <p class="muted">Touchez un thème pour l'inclure ou l'exclure de vos séances.</p>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+      <h2>Ma progression par fiche</h2>
+      <p class="muted">Part des questions maîtrisées (réussies au moins 3 fois de suite).</p>
+      <div class="themes" id="themeBars"></div>
+    </div>
+
+    <div class="row" style="justify-content:space-between;margin-top:8px">
+      <span class="sync" id="sync">Progression enregistrée sur cet appareil.</span>
+      <div class="row">
+        <button type="button" class="ghost" id="btnTransfer">Continuer sur un autre appareil</button>
+        <button type="button" class="ghost" id="btnReset">Remettre à zéro</button>
+      </div>
+    </div>
+    <div class="card hidden" id="transferBox" style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+      <h2>Continuer sur un autre appareil</h2>
+      <p class="muted">Ce lien contient votre progression. Ouvrez-le sur l'autre appareil (envoyez-le vous par SMS, WhatsApp ou mail) : la progression s'y ajoute à celle déjà présente. Refaites-le à chaque fois que vous changez d'appareil.</p>
+      <div class="row">
+        <input id="transferLink" class="field" type="text" readonly aria-label="Lien de transfert">
+      </div>
+      <div class="row">
+        <button type="button" class="primary" id="btnCopy">Copier le lien</button>
+        <button type="button" id="btnShare" class="hidden">Envoyer…</button>
+        <button type="button" class="ghost" id="btnTransferClose">Fermer</button>
+      </div>
+      <p class="muted" id="transferMsg" aria-live="polite"></p>
+    </div>
+    <div class="card hidden" id="confirmReset" style="margin-top:10px">
+      <p>Effacer toute la progression ? Cette action est définitive.</p>
+      <div class="row" style="margin-top:10px">
+        <button type="button" id="resetYes" style="border-color:var(--bad);color:var(--bad)">Oui, tout effacer</button>
+        <button type="button" id="resetNo">Annuler</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="quiz" class="hidden" style="flex-direction:column;gap:16px">
+    <div class="qhead">
+      <button type="button" class="ghost" id="btnQuit">← Arrêter</button>
+      <span class="muted" id="qCount" style="font-variant-numeric:tabular-nums">1 / 20</span>
+    </div>
+    <div class="progress"><i id="qBar" style="width:0%"></i></div>
+    <div class="row"><span class="tag" id="qTheme"></span><span class="pill" id="qState"></span></div>
+    <p class="qtext" id="qText"></p>
+    <div class="opts" id="opts"></div>
+    <div id="fb" class="feedback hidden" aria-live="polite"></div>
+    <div class="row" style="justify-content:space-between">
+      <span class="keys">Clavier : 1 à 4 pour répondre, Entrée pour continuer</span>
+      <button type="button" class="primary hidden" id="btnNext">Question suivante</button>
+    </div>
+  </section>
+
+  <section id="end" class="hidden" style="flex-direction:column;gap:16px">
+    <h1>Séance terminée</h1>
+    <div class="card row" style="gap:20px">
+      <div class="big" id="endScore">0/0</div>
+      <p id="endMsg"></p>
+    </div>
+    <div class="card" id="endErrBox">
+      <h2>À retenir</h2>
+      <ol class="recap" id="endErr" style="margin:12px 0 0;padding-left:20px"></ol>
+    </div>
+    <div class="row">
+      <button type="button" class="primary" id="btnHome">Retour à l'accueil</button>
+      <button type="button" id="btnAgain">Revoir ces erreurs maintenant</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var LS_KEY = "qcm-ap-progress-v1";
+  var INTERVALS = [0, 1, 3, 7, 14, 30]; // jours selon la boîte
+  var THEMES = [], ALL = [], BYID = {};
+  var state = { s:{}, days:{}, off:[] }; // s[id] = [box, dueDay, nbOk, nbKo]
+  var session = null, size = 20;
+  var db = null, userId = null, saveTimer = null, saving = false, pendingSave = false;
+
+  function $(id){ return document.getElementById(id); }
+  function today(){ var d=new Date(); return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); }
+  function dayNum(){ return Math.floor((Date.now() - new Date().getTimezoneOffset()*60000)/86400000); }
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+  // ---------- stockage ----------
+  function loadLocal(){
+    try { var raw = localStorage.getItem(LS_KEY); if(raw){ var o=JSON.parse(raw); if(o && o.s) state = normalize(o); } } catch(e){}
+  }
+  function normalize(o){ return { s:o.s||{}, days:o.days||{}, off:o.off||[] }; }
+  function merge(a,b){ // garde l'entrée la plus avancée pour chaque question
+    var out = normalize(JSON.parse(JSON.stringify(a)));
+    Object.keys(b.s||{}).forEach(function(k){
+      var x=out.s[k], y=b.s[k];
+      if(!x || (y[2]+y[3]) > (x[2]+x[3])) out.s[k]=y;
+    });
+    Object.keys(b.days||{}).forEach(function(k){ out.days[k]=Math.max(out.days[k]||0,b.days[k]); });
+    if((b.off||[]).length && !(out.off||[]).length) out.off=b.off;
+    return out;
+  }
+  function save(){
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
+    if(!db || !userId) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(pushRemote, 1500);
+  }
+  function pushRemote(){
+    if(saving){ pendingSave = true; return; }
+    saving = true;
+    db.collection("data/users/"+userId).doc("qcm").set({ json: JSON.stringify(state), at: Date.now() })
+      .then(function(){ $("sync").textContent = "Progression enregistrée dans votre compte (téléphone et ordinateur)."; })
+      .catch(function(){ $("sync").textContent = "Progression enregistrée sur cet appareil seulement."; })
+      .then(function(){ saving=false; if(pendingSave){ pendingSave=false; pushRemote(); } });
+  }
+  function connectRemote(){
+    if(!window.claude || !window.claude.use) return;
+    var timer = setTimeout(function(){}, 10000);
+    Promise.all([window.claude.use("db"), window.claude.use("user")]).then(function(r){
+      db = r[0]; var user = r[1];
+      if(!db || !user) { clearTimeout(timer); return null; }
+      return user.id().then(function(id){
+        userId = id;
+        if(!userId){ db=null; return null; }
+        return db.collection("data/users/"+userId).doc("qcm").get();
+      });
+    }).then(function(snap){
+      clearTimeout(timer);
+      if(!db || !userId) return;
+      var data = snap && (typeof snap.data === "function" ? snap.data() : snap);
+      if(data && data.json){
+        try { state = merge(state, JSON.parse(data.json)); } catch(e){}
+      }
+      $("sync").textContent = "Progression enregistrée dans votre compte (téléphone et ordinateur).";
+      try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
+      if(!$("home").classList.contains("hidden")) renderHome();
+      pushRemote();
+    }).catch(function(){ clearTimeout(timer); db=null; });
+  }
+
+  // ---------- statistiques ----------
+  function isMastered(id){ var e=state.s[id]; return e && e[0]>=3; }
+  function isDue(id){ var e=state.s[id]; return e && e[1] <= dayNum(); }
+  function isError(id){ var e=state.s[id]; return e && e[0]<=1 && e[3]>0; }
+  function streak(){
+    var n=0, d=new Date();
+    var key=function(x){return x.getFullYear()*10000+(x.getMonth()+1)*100+x.getDate();};
+    if(!state.days[key(d)]) d.setDate(d.getDate()-1);
+    while(state.days[key(d)]){ n++; d.setDate(d.getDate()-1); }
+    return n;
+  }
+  function activeIds(){
+    var off = state.off||[];
+    return ALL.filter(function(q){ return off.indexOf(q.theme)<0; });
+  }
+
+  function renderHome(){
+    $("intro").textContent = ALL.length + " questions tirées de vos " + THEMES.length + " fiches de révision. Une petite séance chaque jour suffit.";
+    $("sStreak").textContent = streak();
+    $("sToday").textContent = state.days[today()] || 0;
+    var m=0, due=0;
+    ALL.forEach(function(q){ if(isMastered(q.id)) m++; if(isError(q.id)) due++; });
+    $("sMastered").textContent = m + " / " + ALL.length;
+    $("sDue").textContent = due;
+    $("btnErrors").disabled = due===0;
+    $("btnErrors").textContent = due ? "Revoir mes erreurs ("+due+")" : "Aucune erreur à revoir";
+    // chips
+    var chips = $("chips"); chips.innerHTML="";
+    THEMES.forEach(function(t){
+      var b=document.createElement("button"); b.type="button"; b.className="chip";
+      b.textContent = t.t + " · " + t.q.length;
+      b.setAttribute("aria-pressed", (state.off||[]).indexOf(t.id)<0 ? "true":"false");
+      b.addEventListener("click", function(){
+        var off=state.off||[]; var i=off.indexOf(t.id);
+        if(i<0) off.push(t.id); else off.splice(i,1);
+        state.off=off; save(); renderHome();
+      });
+      chips.appendChild(b);
+    });
+    // barres
+    var bars=$("themeBars"); bars.innerHTML="";
+    THEMES.forEach(function(t){
+      var done=0; t.q.forEach(function(_,i){ if(isMastered(t.id+"-"+i)) done++; });
+      var pct=Math.round(done*100/t.q.length);
+      var row=document.createElement("div"); row.className="trow";
+      var name=document.createElement("span"); name.textContent=t.t;
+      var bar=document.createElement("div"); bar.className="bar"; var fill=document.createElement("i"); fill.style.width=pct+"%"; bar.appendChild(fill);
+      var em=document.createElement("em"); em.textContent=pct+" %";
+      row.appendChild(name); row.appendChild(bar); row.appendChild(em); bars.appendChild(row);
+    });
+    var act=activeIds().length;
+    $("btnDaily").disabled = act===0;
+    $("btnRandom").disabled = act===0;
+  }
+
+  // ---------- séances ----------
+  function buildDaily(n){
+    var pool=activeIds(), dn=dayNum();
+    var errors=[], due=[], fresh=[];
+    pool.forEach(function(q){
+      var e=state.s[q.id];
+      if(!e) fresh.push(q);
+      else if(e[1]<=dn) (e[0]<=1 ? errors : due).push(q);
+    });
+    shuffle(errors); shuffle(due); shuffle(fresh);
+    var list=errors.concat(due).slice(0, n);
+    // au moins un tiers de nouveautés s'il en reste
+    var nNew=Math.max(n-list.length, Math.ceil(n/3));
+    if(list.length + Math.min(nNew,fresh.length) > n) list=list.slice(0, n-Math.min(nNew,fresh.length));
+    list=list.concat(fresh.slice(0, n-list.length));
+    if(list.length<n){ // tout est vu et rien n'est dû : on complète au hasard
+      var rest=shuffle(pool.filter(function(q){ return list.indexOf(q)<0; }));
+      list=list.concat(rest.slice(0,n-list.length));
+    }
+    return shuffle(list);
+  }
+  function start(list){
+    if(!list.length) return;
+    session={ list:list, i:0, ok:0, errors:[] };
+    show("quiz"); renderQ();
+  }
+  function show(id){
+    ["lock","home","quiz","end"].forEach(function(s){ $(s).classList.toggle("hidden", s!==id); });
+    $(id).style.display = id==="home" ? "" : "flex";
+    window.scrollTo(0,0);
+  }
+  function renderQ(){
+    var q=session.list[session.i];
+    $("qCount").textContent=(session.i+1)+" / "+session.list.length;
+    $("qBar").style.width=(session.i*100/session.list.length)+"%";
+    $("qTheme").textContent=q.themeName;
+    var e=state.s[q.id], st=$("qState");
+    if(!e){ st.className="pill"; st.textContent="Nouvelle"; }
+    else if(e[0]<=1 && e[3]>0){ st.className="pill due"; st.textContent="Déjà ratée"; }
+    else { st.className="pill ok"; st.textContent="Révision"; }
+    $("qText").textContent=q.q;
+    var opts=shuffle([{t:q.c,ok:true}].concat(q.w.map(function(w){return {t:w,ok:false};})));
+    session.opts=opts; session.answered=false;
+    var box=$("opts"); box.innerHTML="";
+    opts.forEach(function(o,i){
+      var b=document.createElement("button"); b.type="button"; b.className="opt"; b.id="opt"+i;
+      var k=document.createElement("span"); k.className="k"; k.textContent="ABCD"[i];
+      var t=document.createElement("span"); t.textContent=o.t;
+      b.appendChild(k); b.appendChild(t);
+      b.addEventListener("click", function(){ answer(i); });
+      box.appendChild(b);
+    });
+    $("fb").classList.add("hidden"); $("btnNext").classList.add("hidden");
+    var first=$("opt0"); if(first) first.focus({preventScroll:true});
+  }
+  function answer(i){
+    if(session.answered) return;
+    session.answered=true;
+    var q=session.list[session.i], o=session.opts[i];
+    session.opts.forEach(function(x,j){
+      var b=$("opt"+j); b.disabled=true;
+      if(x.ok) b.classList.add("ok");
+      if(j===i && !x.ok) b.classList.add("ko");
+    });
+    var e=state.s[q.id]||[0,0,0,0], dn=dayNum();
+    if(o.ok){ e[0]=Math.min(e[0]+1,5); e[2]++; e[1]=dn+INTERVALS[e[0]]; session.ok++; }
+    else { e[0]=1; e[3]++; e[1]=dn+1; session.errors.push(q); }
+    state.s[q.id]=e;
+    var td=today(); state.days[td]=(state.days[td]||0)+1;
+    save();
+    var fb=$("fb"); fb.innerHTML="";
+    fb.className="feedback"+(o.ok?"":" bad");
+    var s=document.createElement("strong"); s.textContent = o.ok ? "Bonne réponse." : "Pas tout à fait. La bonne réponse : " + q.c;
+    var p=document.createElement("p"); p.textContent=q.e;
+    fb.appendChild(s); fb.appendChild(p);
+    var n=$("btnNext"); n.classList.remove("hidden");
+    n.textContent = session.i+1<session.list.length ? "Question suivante" : "Voir mon résultat";
+    n.focus({preventScroll:true});
+    fb.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  function next(){
+    if(!session || !session.answered) return;
+    session.i++;
+    if(session.i>=session.list.length) return finish();
+    renderQ(); window.scrollTo(0,0);
+  }
+  function finish(){
+    $("qBar").style.width="100%";
+    var n=session.list.length, ok=session.ok, pct=Math.round(ok*100/n);
+    $("endScore").textContent=ok+"/"+n;
+    $("endMsg").textContent = pct>=90 ? "Excellent ! Vous êtes prête pour le jury sur ces questions." :
+      pct>=70 ? "Très bien. Les erreurs reviendront demain pour être fixées." :
+      pct>=50 ? "C'est en bonne voie. Relisez les explications ci-dessous, elles reviendront demain." :
+      "Pas de panique : ces questions reviendront demain. Relisez la fiche du thème si besoin.";
+    var ol=$("endErr"); ol.innerHTML="";
+    session.errors.forEach(function(q){
+      var li=document.createElement("li");
+      var a=document.createElement("div"); a.textContent=q.q;
+      var b=document.createElement("div"); b.className="ans"; b.textContent="→ "+q.c;
+      var c=document.createElement("div"); c.className="muted"; c.textContent=q.e;
+      li.appendChild(a); li.appendChild(b); li.appendChild(c); ol.appendChild(li);
+    });
+    $("endErrBox").classList.toggle("hidden", session.errors.length===0);
+    $("btnAgain").classList.toggle("hidden", session.errors.length===0);
+    show("end");
+  }
+
+  // ---------- événements ----------
+  $("sizeSeg").addEventListener("click", function(ev){
+    var b=ev.target.closest("button"); if(!b) return;
+    size=+b.getAttribute("data-n");
+    Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.setAttribute("aria-pressed", x===b?"true":"false"); });
+  });
+  $("btnDaily").addEventListener("click", function(){ start(buildDaily(size)); });
+  $("btnRandom").addEventListener("click", function(){ start(shuffle(activeIds().slice()).slice(0,size)); });
+  $("btnErrors").addEventListener("click", function(){
+    start(shuffle(ALL.filter(function(q){ return isError(q.id); })).slice(0, Math.max(size,20)));
+  });
+  $("btnAll").addEventListener("click", function(){ state.off=[]; save(); renderHome(); });
+  $("btnNone").addEventListener("click", function(){ state.off=THEMES.map(function(t){return t.id;}); save(); renderHome(); });
+  $("btnNext").addEventListener("click", next);
+  $("btnQuit").addEventListener("click", function(){ session=null; show("home"); renderHome(); });
+  $("btnHome").addEventListener("click", function(){ session=null; show("home"); renderHome(); });
+  $("btnAgain").addEventListener("click", function(){ start(shuffle(session.errors.slice())); });
+  $("btnReset").addEventListener("click", function(){ $("confirmReset").classList.remove("hidden"); });
+  $("resetNo").addEventListener("click", function(){ $("confirmReset").classList.add("hidden"); });
+  $("resetYes").addEventListener("click", function(){ state={s:{},days:{},off:[]}; save(); $("confirmReset").classList.add("hidden"); renderHome(); });
+  document.addEventListener("keydown", function(ev){
+    if($("quiz").classList.contains("hidden") || !session) return;
+    if(!session.answered && /^[1-4]$/.test(ev.key)){ answer(+ev.key-1); ev.preventDefault(); }
+    else if(session.answered && ev.key==="Enter" && document.activeElement && document.activeElement.id!=="btnQuit"){ next(); ev.preventDefault(); }
+  });
+
+  // ---------- clé d'accès, transfert ----------
+  var KEY_LS = "qcm-ap-cle", PASS = null, BIN = null;
+  function hashParams(){
+    var o={}; location.hash.replace(/^#/,"").split("&").forEach(function(p){
+      var i=p.indexOf("="); if(i>0){ try{ o[decodeURIComponent(p.slice(0,i))]=decodeURIComponent(p.slice(i+1)); }catch(e){} }
+    }); return o;
+  }
+  function b64url(bytes){ var s=""; for(var i=0;i<bytes.length;i+=0x8000){ s+=String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); } return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+  function unb64url(str){ str=str.replace(/-/g,"+").replace(/_/g,"/"); while(str.length%4) str+="="; var b=atob(str), u=new Uint8Array(b.length); for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+  function pipe(bytes, stream){ return new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer().then(function(b){ return new Uint8Array(b); }); }
+  function decrypt(pass){
+    var buf=new Uint8Array(BIN), salt=buf.slice(0,16), iv=buf.slice(16,28), ct=buf.slice(28);
+    return crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]).then(function(base){
+      return crypto.subtle.deriveKey({name:"PBKDF2", salt:salt, iterations:200000, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+    }).then(function(key){ return crypto.subtle.decrypt({name:"AES-GCM", iv:iv}, key, ct); })
+      .then(function(plain){ return pipe(new Uint8Array(plain), new DecompressionStream("deflate-raw")); })
+      .then(function(raw){ return JSON.parse(new TextDecoder().decode(raw)); });
+  }
+  function transferLink(){
+    var json=new TextEncoder().encode(JSON.stringify(state));
+    return pipe(json, new CompressionStream("deflate-raw")).then(function(z){
+      return location.origin + location.pathname + "#cle=" + encodeURIComponent(PASS) + "&p=" + b64url(z);
+    });
+  }
+  function importFromHash(p){
+    return pipe(unb64url(p), new DecompressionStream("deflate-raw")).then(function(raw){
+      var other=JSON.parse(new TextDecoder().decode(raw));
+      if(other && other.s){ state=merge(state, other); save(); $("sync").textContent="Progression de l'autre appareil récupérée et ajoutée."; }
+    }).catch(function(){ $("sync").textContent="Le lien de progression est incomplet : rien n'a été importé."; });
+  }
+  function cleanHash(){ try{ history.replaceState(null, "", location.pathname + "#cle=" + encodeURIComponent(PASS)); }catch(e){} }
+  function init(data){
+    THEMES=data;
+    data.forEach(function(t){
+      t.q.forEach(function(x,i){
+        var q={ id:t.id+"-"+i, theme:t.id, themeName:t.t, q:x[0], c:x[1], w:x[2], e:x[3] };
+        ALL.push(q); BYID[q.id]=q;
+      });
+    });
+    var p=hashParams().p;
+    (p ? importFromHash(p) : Promise.resolve()).then(function(){ cleanHash(); show("home"); renderHome(); });
+  }
+  function tryPass(pass){
+    return decrypt(pass).then(function(data){
+      PASS=pass; try{ localStorage.setItem(KEY_LS, pass); }catch(e){}
+      init(data); return true;
+    }).catch(function(){ return false; });
+  }
+  function showLock(msg){ show("lock"); $("lockMsg").textContent = msg || ""; $("lockInput").focus(); }
+  $("lockForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var v=$("lockInput").value.trim(); if(!v) return;
+    $("lockBtn").disabled=true; $("lockMsg").textContent="Vérification…";
+    tryPass(v).then(function(ok){ $("lockBtn").disabled=false; if(!ok) $("lockMsg").textContent="Cette clé ne fonctionne pas. Vérifiez-la et réessayez."; });
+  });
+  $("btnTransfer").addEventListener("click", function(){
+    $("transferBox").classList.remove("hidden"); $("transferMsg").textContent=""; $("transferBox").scrollIntoView({behavior:"smooth", block:"start"});
+    transferLink().then(function(url){
+      $("transferLink").value=url;
+      if(navigator.share) $("btnShare").classList.remove("hidden");
+    });
+  });
+  $("btnTransferClose").addEventListener("click", function(){ $("transferBox").classList.add("hidden"); });
+  $("btnCopy").addEventListener("click", function(){
+    var v=$("transferLink").value; if(!v) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(function(){
+      $("transferMsg").textContent="Lien copié. Collez-le dans un message à vous-même, puis ouvrez-le sur l'autre appareil.";
+    }).catch(function(){ $("transferLink").select(); $("transferMsg").textContent="Sélectionnez le lien et copiez-le."; });
+  });
+  $("btnShare").addEventListener("click", function(){
+    navigator.share({ title:"Ma progression QCM", url:$("transferLink").value }).catch(function(){});
+  });
+
+  // ---------- démarrage ----------
+  loadLocal();
+  $("home").classList.add("hidden");
+  fetch("questions.bin").then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(function(b){
+    BIN=b;
+    var pass=hashParams().cle; var stored=null;
+    try{ stored=localStorage.getItem(KEY_LS); }catch(e){}
+    var first = pass || stored;
+    if(!first) return showLock();
+    return tryPass(first).then(function(ok){
+      if(ok) return;
+      if(pass && stored && stored!==pass) return tryPass(stored).then(function(ok2){ if(!ok2) showLock("La clé enregistrée ne fonctionne plus. Saisissez la nouvelle clé."); });
+      showLock(pass ? "La clé du lien ne fonctionne pas." : "La clé enregistrée ne fonctionne plus. Saisissez la nouvelle clé.");
+    });
+  }).catch(function(){
+    show("home"); $("intro").textContent="Les questions n'ont pas pu être chargées. Rechargez la page.";
+  });
+})();
+</script>
+</body>
+</html>
