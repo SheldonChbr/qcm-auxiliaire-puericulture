@@ -95,6 +95,18 @@ button:focus-visible,.opt:focus-visible{outline:3px solid var(--accent);outline-
 .hidden{display:none!important}
 input.field{font:inherit;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);flex:1;min-width:0}
 input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
+textarea.answer{font:inherit;width:100%;min-height:150px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);resize:vertical;line-height:1.5}
+textarea.answer:focus{outline:2px solid var(--accent);outline-offset:1px}
+textarea.answer[readonly]{opacity:.85}
+.pill.open{background:var(--accent-soft);color:var(--accent)}
+.pts{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pts li{display:flex;gap:10px;align-items:flex-start}
+.pts li b{flex:0 0 1.4em;text-align:center;font-weight:700}
+.pts li.hit b{color:var(--good)}
+.pts li.miss b{color:var(--muted)}
+.pts li.miss span{color:var(--muted)}
+.model{margin:8px 0 0;padding:12px 14px;border-left:3px solid var(--accent);background:var(--card);border-radius:8px}
+.selfgrade{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 .sync{font-size:.82rem;color:var(--muted)}
 .keys{font-size:.8rem;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -202,9 +214,17 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
     <div class="row"><span class="tag" id="qTheme"></span><span class="pill" id="qState"></span></div>
     <p class="qtext" id="qText"></p>
     <div class="opts" id="opts"></div>
+    <div id="openBox" class="hidden" style="flex-direction:column;gap:10px">
+      <label for="openInput" class="muted">Répondez avec vos mots, comme devant le jury. Pas besoin de phrases parfaites : notez les idées clés.</label>
+      <textarea id="openInput" class="answer" placeholder="Ma réponse…"></textarea>
+      <div class="row">
+        <button type="button" class="primary" id="btnCheck">Voir la correction</button>
+        <button type="button" id="btnDontKnow">Je ne sais pas</button>
+      </div>
+    </div>
     <div id="fb" class="feedback hidden" aria-live="polite"></div>
     <div class="row" style="justify-content:space-between">
-      <span class="keys">Clavier : 1 à 4 pour répondre, Entrée pour continuer</span>
+      <span class="keys" id="keysHint">Clavier : 1 à 4 pour répondre, Entrée pour continuer</span>
       <button type="button" class="primary hidden" id="btnNext">Question suivante</button>
     </div>
   </section>
@@ -231,7 +251,8 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
   "use strict";
   var LS_KEY = "qcm-ap-progress-v1";
   var INTERVALS = [0, 1, 3, 7, 14, 30]; // jours selon la boîte
-  var THEMES = [], ALL = [], BYID = {};
+  var THEMES = [], ALL = [], BYID = {}, NOPEN = 0;
+  var OPEN_SHARE = 0.2; // part de questions à réponse libre par séance
   var state = { s:{}, days:{}, off:[] }; // s[id] = [box, dueDay, nbOk, nbKo]
   var session = null, size = 20;
   var db = null, userId = null, saveTimer = null, saving = false, pendingSave = false;
@@ -306,13 +327,39 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
     while(state.days[key(d)]){ n++; d.setDate(d.getDate()-1); }
     return n;
   }
+  function norm(s){
+    return " " + String(s).toLowerCase().replace(/œ/g,"oe").replace(/æ/g,"ae")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim() + " ";
+  }
+  function hasKw(text, kw){
+    var k=norm(kw).trim(); if(!k) return false;
+    return text.indexOf(" "+k+(/^[0-9 ]+$/.test(k)?" ":"")) >= 0;
+  }
+  function ingest(data){
+    THEMES=data;
+    data.forEach(function(t){
+      t.q.forEach(function(x,i){
+        var q={ id:t.id+"-"+i, theme:t.id, themeName:t.t, q:x[0], c:x[1], w:x[2], e:x[3] };
+        ALL.push(q); BYID[q.id]=q;
+      });
+      (t.o||[]).forEach(function(x,i){
+        var q={ id:t.id+"-o"+i, theme:t.id, themeName:t.t, open:true, q:x[0], r:x[1], p:x[2] };
+        ALL.push(q); BYID[q.id]=q; NOPEN++;
+      });
+    });
+  }
+  function themeIds(t){
+    var ids=t.q.map(function(_,i){ return t.id+"-"+i; });
+    (t.o||[]).forEach(function(_,i){ ids.push(t.id+"-o"+i); });
+    return ids;
+  }
   function activeIds(){
     var off = state.off||[];
     return ALL.filter(function(q){ return off.indexOf(q.theme)<0; });
   }
 
   function renderHome(){
-    $("intro").textContent = ALL.length + " questions tirées de vos " + THEMES.length + " fiches de révision. Une petite séance chaque jour suffit.";
+    $("intro").textContent = (ALL.length-NOPEN) + " QCM et " + NOPEN + " questions à réponse libre tirés de vos " + THEMES.length + " fiches de révision. Une petite séance chaque jour suffit.";
     $("sStreak").textContent = streak();
     $("sToday").textContent = state.days[today()] || 0;
     var m=0, due=0;
@@ -325,7 +372,7 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
     var chips = $("chips"); chips.innerHTML="";
     THEMES.forEach(function(t){
       var b=document.createElement("button"); b.type="button"; b.className="chip";
-      b.textContent = t.t + " · " + t.q.length;
+      b.textContent = t.t + " · " + (t.q.length + (t.o||[]).length);
       b.setAttribute("aria-pressed", (state.off||[]).indexOf(t.id)<0 ? "true":"false");
       b.addEventListener("click", function(){
         var off=state.off||[]; var i=off.indexOf(t.id);
@@ -337,8 +384,8 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
     // barres
     var bars=$("themeBars"); bars.innerHTML="";
     THEMES.forEach(function(t){
-      var done=0; t.q.forEach(function(_,i){ if(isMastered(t.id+"-"+i)) done++; });
-      var pct=Math.round(done*100/t.q.length);
+      var ids=themeIds(t), done=0; ids.forEach(function(id){ if(isMastered(id)) done++; });
+      var pct=Math.round(done*100/ids.length);
       var row=document.createElement("div"); row.className="trow";
       var name=document.createElement("span"); name.textContent=t.t;
       var bar=document.createElement("div"); bar.className="bar"; var fill=document.createElement("i"); fill.style.width=pct+"%"; bar.appendChild(fill);
@@ -351,8 +398,27 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
   }
 
   // ---------- séances ----------
+  function splitCount(n, pool){
+    var nOpen=Math.round(n*OPEN_SHARE);
+    var nbOpen=pool.filter(function(q){ return q.open; }).length;
+    nOpen=Math.min(nOpen, nbOpen);
+    return { open:nOpen, mcq:n-nOpen };
+  }
   function buildDaily(n){
-    var pool=activeIds(), dn=dayNum();
+    var pool=activeIds(), k=splitCount(n, pool);
+    var a=pickDaily(pool.filter(function(q){ return q.open; }), k.open);
+    var b=pickDaily(pool.filter(function(q){ return !q.open; }), n-a.length);
+    return shuffle(a.concat(b));
+  }
+  function buildRandom(n){
+    var pool=activeIds(), k=splitCount(n, pool);
+    var a=shuffle(pool.filter(function(q){ return q.open; })).slice(0,k.open);
+    var b=shuffle(pool.filter(function(q){ return !q.open; })).slice(0,n-a.length);
+    return shuffle(a.concat(b));
+  }
+  function pickDaily(pool, n){
+    if(n<=0) return [];
+    var dn=dayNum();
     var errors=[], due=[], fresh=[];
     pool.forEach(function(q){
       var e=state.s[q.id];
@@ -391,6 +457,20 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
     else if(e[0]<=1 && e[3]>0){ st.className="pill due"; st.textContent="Déjà ratée"; }
     else { st.className="pill ok"; st.textContent="Révision"; }
     $("qText").textContent=q.q;
+    $("fb").classList.add("hidden"); $("btnNext").classList.add("hidden");
+    session.answered=false;
+    if(q.open){
+      st.className="pill open"; st.textContent = !e ? "Réponse libre · nouvelle" : (e[0]<=1 && e[3]>0 ? "Réponse libre · déjà ratée" : "Réponse libre");
+      $("opts").innerHTML=""; $("opts").classList.add("hidden");
+      var box2=$("openBox"); box2.classList.remove("hidden"); box2.style.display="flex";
+      var ta=$("openInput"); ta.value=""; ta.readOnly=false;
+      $("btnCheck").classList.remove("hidden"); $("btnDontKnow").classList.remove("hidden");
+      $("keysHint").textContent="Ctrl + Entrée pour voir la correction";
+      ta.focus({preventScroll:true});
+      return;
+    }
+    $("openBox").classList.add("hidden"); $("opts").classList.remove("hidden");
+    $("keysHint").textContent="Clavier : 1 à 4 pour répondre, Entrée pour continuer";
     var opts=shuffle([{t:q.c,ok:true}].concat(q.w.map(function(w){return {t:w,ok:false};})));
     session.opts=opts; session.answered=false;
     var box=$("opts"); box.innerHTML="";
@@ -414,17 +494,84 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
       if(x.ok) b.classList.add("ok");
       if(j===i && !x.ok) b.classList.add("ko");
     });
-    var e=state.s[q.id]||[0,0,0,0], dn=dayNum();
-    if(o.ok){ e[0]=Math.min(e[0]+1,5); e[2]++; e[1]=dn+INTERVALS[e[0]]; session.ok++; }
-    else { e[0]=1; e[3]++; e[1]=dn+1; session.errors.push(q); }
-    state.s[q.id]=e;
-    var td=today(); state.days[td]=(state.days[td]||0)+1;
-    save();
+    record(q, o.ok);
     var fb=$("fb"); fb.innerHTML="";
     fb.className="feedback"+(o.ok?"":" bad");
     var s=document.createElement("strong"); s.textContent = o.ok ? "Bonne réponse." : "Pas tout à fait. La bonne réponse : " + q.c;
     var p=document.createElement("p"); p.textContent=q.e;
     fb.appendChild(s); fb.appendChild(p);
+    var n=$("btnNext"); n.classList.remove("hidden");
+    n.textContent = session.i+1<session.list.length ? "Question suivante" : "Voir mon résultat";
+    n.focus({preventScroll:true});
+    fb.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  function record(q, ok){
+    var e=state.s[q.id]||[0,0,0,0], dn=dayNum();
+    if(ok){ e[0]=Math.min(e[0]+1,5); e[2]++; e[1]=dn+INTERVALS[e[0]]; session.ok++; }
+    else { e[0]=1; e[3]++; e[1]=dn+1; session.errors.push(q); }
+    state.s[q.id]=e;
+    var td=today(); state.days[td]=(state.days[td]||0)+1;
+    save();
+  }
+  // ---------- réponse libre ----------
+  function checkOpen(dontKnow){
+    var q=session.list[session.i]; if(!q || !q.open || session.checked===session.i) return;
+    session.checked=session.i;
+    var ta=$("openInput"), txt=norm(dontKnow ? "" : ta.value);
+    ta.readOnly=true;
+    $("btnCheck").classList.add("hidden"); $("btnDontKnow").classList.add("hidden");
+    var hits=0;
+    var fb=$("fb"); fb.innerHTML=""; fb.className="feedback";
+    var h=document.createElement("strong"); h.textContent="Réponse attendue";
+    var m=document.createElement("p"); m.className="model"; m.textContent=q.r;
+    var ul=document.createElement("ul"); ul.className="pts";
+    q.p.forEach(function(pt){
+      var hit = pt[1].some(function(k){ return hasKw(txt,k); });
+      if(hit) hits++;
+      var li=document.createElement("li"); li.className=hit?"hit":"miss";
+      var b=document.createElement("b"); b.textContent=hit?"✓":"○";
+      var s=document.createElement("span"); s.textContent=pt[0];
+      li.appendChild(b); li.appendChild(s); ul.appendChild(li);
+    });
+    var lab=document.createElement("p"); lab.className="muted"; lab.style.marginTop="12px";
+    fb.appendChild(h); fb.appendChild(m);
+    if(dontKnow){
+      lab.textContent="Points clés à retenir :";
+      fb.appendChild(lab); fb.appendChild(ul);
+      ul.querySelectorAll("li").forEach(function(li){ li.className="miss"; li.firstChild.textContent="•"; });
+      gradeOpen(false, true);
+      return;
+    }
+    lab.textContent="Points clés repérés dans votre réponse : " + hits + " sur " + q.p.length + ". La détection se fait par mots-clés : c'est vous qui jugez.";
+    fb.appendChild(lab); fb.appendChild(ul);
+    var g=document.createElement("div"); g.className="selfgrade"; g.id="selfGrade";
+    var good = hits >= Math.ceil(q.p.length*0.6);
+    var bOk=document.createElement("button"); bOk.type="button"; bOk.id="gradeOk";
+    bOk.textContent="J'avais l'essentiel";
+    var bKo=document.createElement("button"); bKo.type="button"; bKo.id="gradeKo";
+    bKo.textContent="À revoir";
+    (good ? bOk : bKo).className="primary";
+    bOk.addEventListener("click", function(){ gradeOpen(true); });
+    bKo.addEventListener("click", function(){ gradeOpen(false); });
+    g.appendChild(bOk); g.appendChild(bKo); fb.appendChild(g);
+    fb.classList.remove("hidden");
+    (good ? bOk : bKo).focus({preventScroll:true});
+    fb.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  function gradeOpen(ok, dontKnow){
+    if(session.answered) return;
+    session.answered=true;
+    var q=session.list[session.i];
+    record(q, ok);
+    var g=$("selfGrade"); if(g) g.remove();
+    var fb=$("fb");
+    if(!ok) fb.className="feedback bad";
+    var s=document.createElement("p"); s.style.marginTop="12px";
+    s.innerHTML="";
+    var st=document.createElement("strong");
+    st.textContent = ok ? "Bien joué : la question reviendra plus tard." : (dontKnow ? "Pas grave : relisez la réponse, la question reviendra demain." : "Noté : la question reviendra demain.");
+    s.appendChild(st); fb.appendChild(s);
+    fb.classList.remove("hidden");
     var n=$("btnNext"); n.classList.remove("hidden");
     n.textContent = session.i+1<session.list.length ? "Question suivante" : "Voir mon résultat";
     n.focus({preventScroll:true});
@@ -448,8 +595,8 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
     session.errors.forEach(function(q){
       var li=document.createElement("li");
       var a=document.createElement("div"); a.textContent=q.q;
-      var b=document.createElement("div"); b.className="ans"; b.textContent="→ "+q.c;
-      var c=document.createElement("div"); c.className="muted"; c.textContent=q.e;
+      var b=document.createElement("div"); b.className="ans"; b.textContent="→ "+(q.open ? q.r : q.c);
+      var c=document.createElement("div"); c.className="muted"; c.textContent=q.open ? "Points clés : "+q.p.map(function(x){return x[0];}).join(" · ") : q.e;
       li.appendChild(a); li.appendChild(b); li.appendChild(c); ol.appendChild(li);
     });
     $("endErrBox").classList.toggle("hidden", session.errors.length===0);
@@ -464,7 +611,7 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
     Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.setAttribute("aria-pressed", x===b?"true":"false"); });
   });
   $("btnDaily").addEventListener("click", function(){ start(buildDaily(size)); });
-  $("btnRandom").addEventListener("click", function(){ start(shuffle(activeIds().slice()).slice(0,size)); });
+  $("btnRandom").addEventListener("click", function(){ start(buildRandom(size)); });
   $("btnErrors").addEventListener("click", function(){
     start(shuffle(ALL.filter(function(q){ return isError(q.id); })).slice(0, Math.max(size,20)));
   });
@@ -477,8 +624,18 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
   $("btnReset").addEventListener("click", function(){ $("confirmReset").classList.remove("hidden"); });
   $("resetNo").addEventListener("click", function(){ $("confirmReset").classList.add("hidden"); });
   $("resetYes").addEventListener("click", function(){ state={s:{},days:{},off:[]}; save(); $("confirmReset").classList.add("hidden"); renderHome(); });
+  $("btnCheck").addEventListener("click", function(){ checkOpen(false); });
+  $("btnDontKnow").addEventListener("click", function(){ checkOpen(true); });
+  $("openInput").addEventListener("keydown", function(ev){
+    if(ev.key==="Enter" && (ev.ctrlKey||ev.metaKey)){ ev.preventDefault(); checkOpen(false); }
+  });
   document.addEventListener("keydown", function(ev){
     if($("quiz").classList.contains("hidden") || !session) return;
+    var cur=session.list[session.i];
+    if(cur && cur.open){
+      if(session.answered && ev.key==="Enter" && document.activeElement && document.activeElement.id==="btnNext"){ /* bouton natif */ }
+      return;
+    }
     if(!session.answered && /^[1-4]$/.test(ev.key)){ answer(+ev.key-1); ev.preventDefault(); }
     else if(session.answered && ev.key==="Enter" && document.activeElement && document.activeElement.id!=="btnQuit"){ next(); ev.preventDefault(); }
   });
@@ -515,13 +672,7 @@ input.field:focus{outline:2px solid var(--accent);outline-offset:1px}
   }
   function cleanHash(){ try{ history.replaceState(null, "", location.pathname + "#cle=" + encodeURIComponent(PASS)); }catch(e){} }
   function init(data){
-    THEMES=data;
-    data.forEach(function(t){
-      t.q.forEach(function(x,i){
-        var q={ id:t.id+"-"+i, theme:t.id, themeName:t.t, q:x[0], c:x[1], w:x[2], e:x[3] };
-        ALL.push(q); BYID[q.id]=q;
-      });
-    });
+    ingest(data);
     var p=hashParams().p;
     (p ? importFromHash(p) : Promise.resolve()).then(function(){ cleanHash(); show("home"); renderHome(); });
   }
