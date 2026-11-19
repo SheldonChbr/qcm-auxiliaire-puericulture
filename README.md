@@ -3,6 +3,7 @@
 QCM d'entraînement quotidien pour préparer le diplôme d'État d'auxiliaire de puériculture (DEAP).
 
 - 20 % de questions à réponse libre dans chaque séance, sur l'essentiel : on écrit sa réponse, puis on la compare à la réponse attendue et à ses points clés
+- Deux modes au choix : « Une seule » bonne réponse, ou « Plusieurs possibles » (198 questions à plusieurs bonnes réponses, mélangées à des questions à une seule réponse, correction tout ou rien)
 - Séance du jour : les erreurs d'abord, puis les questions à revoir, puis des nouvelles
 - Répétition espacée : une question bien répondue revient de plus en plus tard, une erreur revient le lendemain
 - Choix des thèmes et suivi de la maîtrise par fiche

@@ -114,6 +114,16 @@ textarea.answer[readonly]{opacity:.85}
 @keyframes starIn{0%{transform:scale(0) rotate(-90deg);opacity:0}70%{transform:scale(1.25) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0)}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 12px 2px var(--good)}}
 @keyframes toastIn{from{transform:translate(-50%,-16px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.opt.sel{border-color:var(--accent);background:var(--accent-soft)}
+.opt.sel .k{background:var(--accent);border-color:var(--accent);color:#fff}
+.opt.miss{border:2px dashed var(--good);background:var(--good-soft)}
+.opt.miss .k{border-color:var(--good);color:var(--good)}
+.opt.dim{opacity:.6}
+.opt .flag{margin-left:auto;padding-left:10px;font-size:.82rem;font-weight:700;white-space:nowrap}
+.opt.miss .flag{color:var(--good)}
+.opt.ko .flag{color:var(--bad)}
+.opt.ok .flag{color:var(--good)}
+.multihint{margin:-6px 0 0;color:var(--accent);font-weight:700;font-size:.92rem}
 .opt.ok.anim{animation:pop .35s ease-out}
 .opt.ko.anim{animation:shake .4s ease-out}
 .feedback.anim{animation:pop .35s ease-out}
@@ -171,6 +181,12 @@ textarea.answer[readonly]{opacity:.85}
         <button type="button" data-n="40">40</button>
         <button type="button" data-n="80">80</button>
       </div>
+      <div class="row seg" role="group" aria-label="Type de réponses" id="modeSeg">
+        <span class="muted">Réponses :</span>
+        <button type="button" data-m="single" aria-pressed="true">Une seule</button>
+        <button type="button" data-m="multi">Plusieurs possibles</button>
+      </div>
+      <p class="muted" id="modeHelp" style="margin:-4px 0 0"></p>
       <div class="row">
         <button type="button" class="primary" id="btnDaily" disabled>Commencer la séance</button>
         <button type="button" id="btnErrors">Revoir mes erreurs</button>
@@ -233,7 +249,11 @@ textarea.answer[readonly]{opacity:.85}
     <div class="progress"><i id="qBar" style="width:0%"></i></div>
     <div class="row"><span class="tag" id="qTheme"></span><span class="pill" id="qState"></span></div>
     <p class="qtext" id="qText"></p>
+    <p class="multihint hidden" id="multiHint">Une ou plusieurs bonnes réponses</p>
     <div class="opts" id="opts"></div>
+    <div class="row hidden" id="validateRow">
+      <button type="button" class="primary" id="btnValidate" disabled>Valider</button>
+    </div>
     <div id="openBox" class="hidden" style="flex-direction:column;gap:10px">
       <label for="openInput" class="muted">Répondez avec vos mots, comme devant le jury. Pas besoin de phrases parfaites : notez les idées clés.</label>
       <textarea id="openInput" class="answer" placeholder="Ma réponse…"></textarea>
@@ -276,9 +296,10 @@ textarea.answer[readonly]{opacity:.85}
   "use strict";
   var LS_KEY = "qcm-ap-progress-v1";
   var INTERVALS = [0, 1, 3, 7, 14, 30]; // jours selon la boîte
-  var THEMES = [], ALL = [], BYID = {}, NOPEN = 0;
+  var THEMES = [], ALL = [], BYID = {}, NOPEN = 0, NMULTI = 0;
+  var MULTI_SHARE = 0.5; // part de questions à plusieurs bonnes réponses en mode « Plusieurs possibles »
   var OPEN_SHARE = 0.2; // part de questions à réponse libre par séance
-  var state = { s:{}, days:{}, off:[], perfect:0, cel:{} }; // s[id] = [box, dueDay, nbOk, nbKo]
+  var state = { s:{}, days:{}, off:[], perfect:0, cel:{}, mode:"single" }; // s[id] = [box, dueDay, nbOk, nbKo]
   var session = null, size = 20;
   var db = null, userId = null, saveTimer = null, saving = false, pendingSave = false;
 
@@ -441,7 +462,7 @@ textarea.answer[readonly]{opacity:.85}
   function loadLocal(){
     try { var raw = localStorage.getItem(LS_KEY); if(raw){ var o=JSON.parse(raw); if(o && o.s) state = normalize(o); } } catch(e){}
   }
-  function normalize(o){ return { s:o.s||{}, days:o.days||{}, off:o.off||[], perfect:o.perfect||0, cel:o.cel||{} }; }
+  function normalize(o){ return { s:o.s||{}, days:o.days||{}, off:o.off||[], perfect:o.perfect||0, cel:o.cel||{}, mode:o.mode==="multi"?"multi":"single" }; }
   function merge(a,b){ // garde l'entrée la plus avancée pour chaque question
     var out = normalize(JSON.parse(JSON.stringify(a)));
     Object.keys(b.s||{}).forEach(function(k){
@@ -523,25 +544,37 @@ textarea.answer[readonly]{opacity:.85}
         var q={ id:t.id+"-o"+i, theme:t.id, themeName:t.t, open:true, q:x[0], r:x[1], p:x[2] };
         ALL.push(q); BYID[q.id]=q; NOPEN++;
       });
+      (t.m||[]).forEach(function(x,i){
+        var q={ id:t.id+"-m"+i, theme:t.id, themeName:t.t, multi:true, q:x[0], o:x[1], e:x[2] };
+        ALL.push(q); BYID[q.id]=q; NMULTI++;
+      });
     });
   }
   function themeIds(t){
     var ids=t.q.map(function(_,i){ return t.id+"-"+i; });
     (t.o||[]).forEach(function(_,i){ ids.push(t.id+"-o"+i); });
+    if(state.mode==="multi") (t.m||[]).forEach(function(_,i){ ids.push(t.id+"-m"+i); });
     return ids;
   }
   function activeIds(){
     var off = state.off||[];
-    return ALL.filter(function(q){ return off.indexOf(q.theme)<0; });
+    return modePool().filter(function(q){ return off.indexOf(q.theme)<0; });
+  }
+  function modePool(){
+    return state.mode==="multi" ? ALL : ALL.filter(function(q){ return !q.multi; });
   }
 
   function renderHome(){
-    $("intro").textContent = (ALL.length-NOPEN) + " QCM et " + NOPEN + " questions à réponse libre tirés de vos " + THEMES.length + " fiches de révision. Une petite séance chaque jour suffit.";
+    $("intro").textContent = (ALL.length-NOPEN-NMULTI) + " QCM, " + NMULTI + " QCM à plusieurs bonnes réponses et " + NOPEN + " questions à réponse libre tirés de vos " + THEMES.length + " fiches de révision. Une petite séance chaque jour suffit.";
     $("sStreak").textContent = streak();
     $("sToday").textContent = state.days[today()] || 0;
-    var m=0, due=0;
-    ALL.forEach(function(q){ if(isMastered(q.id)) m++; if(isError(q.id)) due++; });
-    $("sMastered").textContent = m + " / " + ALL.length;
+    var m=0, due=0, mp=modePool();
+    mp.forEach(function(q){ if(isMastered(q.id)) m++; if(isError(q.id)) due++; });
+    $("sMastered").textContent = m + " / " + mp.length;
+    Array.prototype.forEach.call($("modeSeg").querySelectorAll("button"), function(x){ x.setAttribute("aria-pressed", x.getAttribute("data-m")===state.mode?"true":"false"); });
+    $("modeHelp").textContent = state.mode==="multi"
+      ? "Chaque question peut avoir une ou plusieurs bonnes réponses : cochez tout ce qui est juste, puis validez. La question compte comme juste seulement si tout est exact."
+      : "Une seule bonne réponse par question.";
     $("sDue").textContent = due;
     $("btnErrors").disabled = due===0;
     $("btnErrors").textContent = due ? "Revoir mes erreurs ("+due+")" : "Aucune erreur à revoir";
@@ -549,7 +582,7 @@ textarea.answer[readonly]{opacity:.85}
     var chips = $("chips"); chips.innerHTML="";
     THEMES.forEach(function(t){
       var b=document.createElement("button"); b.type="button"; b.className="chip";
-      b.textContent = t.t + " · " + (t.q.length + (t.o||[]).length);
+      b.textContent = t.t + " · " + themeIds(t).length;
       b.setAttribute("aria-pressed", (state.off||[]).indexOf(t.id)<0 ? "true":"false");
       b.addEventListener("click", function(){
         var off=state.off||[]; var i=off.indexOf(t.id);
@@ -582,18 +615,16 @@ textarea.answer[readonly]{opacity:.85}
     nOpen=Math.min(nOpen, nbOpen);
     return { open:nOpen, mcq:n-nOpen };
   }
-  function buildDaily(n){
+  function build(n, picker){
     var pool=activeIds(), k=splitCount(n, pool);
-    var a=pickDaily(pool.filter(function(q){ return q.open; }), k.open);
-    var b=pickDaily(pool.filter(function(q){ return !q.open; }), n-a.length);
-    return shuffle(a.concat(b));
+    var a=picker(pool.filter(function(q){ return q.open; }), k.open);
+    var b=[];
+    if(state.mode==="multi") b=picker(pool.filter(function(q){ return q.multi; }), Math.round(n*MULTI_SHARE));
+    var c=picker(pool.filter(function(q){ return !q.open && !q.multi; }), n-a.length-b.length);
+    return shuffle(a.concat(b, c));
   }
-  function buildRandom(n){
-    var pool=activeIds(), k=splitCount(n, pool);
-    var a=shuffle(pool.filter(function(q){ return q.open; })).slice(0,k.open);
-    var b=shuffle(pool.filter(function(q){ return !q.open; })).slice(0,n-a.length);
-    return shuffle(a.concat(b));
-  }
+  function buildDaily(n){ return build(n, pickDaily); }
+  function buildRandom(n){ return build(n, function(p, k){ return shuffle(p.slice()).slice(0, Math.max(0,k)); }); }
   function pickDaily(pool, n){
     if(n<=0) return [];
     var dn=dayNum();
@@ -617,7 +648,7 @@ textarea.answer[readonly]{opacity:.85}
   }
   function start(list){
     if(!list.length) return;
-    session={ list:list, i:0, ok:0, errors:[], combo:0 };
+    session={ list:list, i:0, ok:0, errors:[], combo:0, multi: state.mode==="multi" };
     show("quiz"); renderQ();
   }
   function show(id){
@@ -649,8 +680,11 @@ textarea.answer[readonly]{opacity:.85}
     }
     $("openBox").classList.add("hidden"); $("opts").classList.remove("hidden");
     $("keysHint").textContent="Clavier : 1 à 4 pour répondre, Entrée pour continuer";
-    var opts=shuffle([{t:q.c,ok:true}].concat(q.w.map(function(w){return {t:w,ok:false};})));
-    session.opts=opts; session.answered=false;
+    $("multiHint").classList.add("hidden"); $("validateRow").classList.add("hidden");
+    var opts = q.multi ? shuffle(q.o.map(function(x){ return {t:x[0], ok:!!x[1]}; }))
+      : shuffle([{t:q.c,ok:true}].concat(q.w.map(function(w){return {t:w,ok:false};})));
+    session.opts=opts; session.answered=false; session.sel=[false,false,false,false];
+    if(session.multi){ renderMulti(opts); return; }
     var box=$("opts"); box.innerHTML="";
     opts.forEach(function(o,i){
       var b=document.createElement("button"); b.type="button"; b.className="opt"; b.id="opt"+i;
@@ -662,6 +696,64 @@ textarea.answer[readonly]{opacity:.85}
     });
     $("fb").classList.add("hidden"); $("btnNext").classList.add("hidden");
     var first=$("opt0"); if(first) first.focus({preventScroll:true});
+  }
+  function renderMulti(opts){
+    $("multiHint").classList.remove("hidden");
+    $("validateRow").classList.remove("hidden"); $("validateRow").style.display="flex";
+    $("btnValidate").disabled=true;
+    $("keysHint").textContent="Clavier : 1 à 4 pour cocher, Entrée pour valider";
+    var box=$("opts"); box.innerHTML="";
+    opts.forEach(function(o,i){
+      var b=document.createElement("button"); b.type="button"; b.className="opt"; b.id="opt"+i;
+      b.setAttribute("role","checkbox"); b.setAttribute("aria-checked","false");
+      var k=document.createElement("span"); k.className="k"; k.textContent="ABCD"[i];
+      var t=document.createElement("span"); t.textContent=o.t;
+      b.appendChild(k); b.appendChild(t);
+      b.addEventListener("click", function(){ toggleSel(i); });
+      box.appendChild(b);
+    });
+    var first=$("opt0"); if(first) first.focus({preventScroll:true});
+  }
+  function toggleSel(i){
+    if(session.answered) return;
+    session.sel[i]=!session.sel[i];
+    var b=$("opt"+i);
+    b.classList.toggle("sel", session.sel[i]);
+    b.setAttribute("aria-checked", session.sel[i]?"true":"false");
+    $("btnValidate").disabled = !session.sel.some(Boolean);
+  }
+  function validateMulti(){
+    if(session.answered || !session.sel.some(Boolean)) return;
+    session.answered=true;
+    var q=session.list[session.i], ok=true, good=[];
+    session.opts.forEach(function(x,j){
+      var b=$("opt"+j), s=session.sel[j]; b.disabled=true; b.classList.remove("sel");
+      var flag=document.createElement("span"); flag.className="flag";
+      if(x.ok) good.push(x.t);
+      if(x.ok && s){ b.classList.add("ok"); flag.textContent="✓ juste"; }
+      else if(x.ok && !s){ b.classList.add("miss"); flag.textContent="oubliée"; ok=false; }
+      else if(!x.ok && s){ b.classList.add("ko"); flag.textContent="✗ fausse"; ok=false; }
+      else { b.classList.add("dim"); flag.textContent=""; }
+      if(flag.textContent) b.appendChild(flag);
+      if(s) animate(b);
+    });
+    $("validateRow").classList.add("hidden");
+    record(q, ok);
+    var fb=$("fb"); fb.innerHTML="";
+    fb.className="feedback"+(ok?"":" bad");
+    var st=document.createElement("strong");
+    st.textContent = ok ? "Bonne réponse." : (good.length>1 ? "Pas tout à fait. Les bonnes réponses : " : "Pas tout à fait. La bonne réponse : ") + good.join(" · ");
+    var p=document.createElement("p"); p.textContent=q.e;
+    fb.appendChild(st); fb.appendChild(p);
+    var n=$("btnNext"); n.classList.remove("hidden");
+    n.textContent = session.i+1<session.list.length ? "Question suivante" : "Voir mon résultat";
+    n.focus({preventScroll:true});
+    fb.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  function goodText(q){
+    if(q.open) return q.r;
+    if(q.multi) return q.o.filter(function(x){ return x[1]; }).map(function(x){ return x[0]; }).join(" · ");
+    return q.c;
   }
   function answer(i){
     if(session.answered) return;
@@ -771,7 +863,7 @@ textarea.answer[readonly]{opacity:.85}
     session.errors.forEach(function(q){
       var li=document.createElement("li");
       var a=document.createElement("div"); a.textContent=q.q;
-      var b=document.createElement("div"); b.className="ans"; b.textContent="→ "+(q.open ? q.r : q.c);
+      var b=document.createElement("div"); b.className="ans"; b.textContent="→ "+goodText(q);
       var c=document.createElement("div"); c.className="muted"; c.textContent=q.open ? "Points clés : "+q.p.map(function(x){return x[0];}).join(" · ") : q.e;
       li.appendChild(a); li.appendChild(b); li.appendChild(c); ol.appendChild(li);
     });
@@ -787,10 +879,15 @@ textarea.answer[readonly]{opacity:.85}
     size=+b.getAttribute("data-n");
     Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.setAttribute("aria-pressed", x===b?"true":"false"); });
   });
+  $("modeSeg").addEventListener("click", function(ev){
+    var b=ev.target.closest("button"); if(!b) return;
+    state.mode=b.getAttribute("data-m")==="multi"?"multi":"single"; save(); renderHome();
+  });
+  $("btnValidate").addEventListener("click", validateMulti);
   $("btnDaily").addEventListener("click", function(){ start(buildDaily(size)); });
   $("btnRandom").addEventListener("click", function(){ start(buildRandom(size)); });
   $("btnErrors").addEventListener("click", function(){
-    start(shuffle(ALL.filter(function(q){ return isError(q.id); })).slice(0, Math.max(size,20)));
+    start(shuffle(modePool().filter(function(q){ return isError(q.id); })).slice(0, Math.max(size,20)));
   });
   $("btnAll").addEventListener("click", function(){ state.off=[]; save(); renderHome(); });
   $("btnNone").addEventListener("click", function(){ state.off=THEMES.map(function(t){return t.id;}); save(); renderHome(); });
@@ -800,7 +897,7 @@ textarea.answer[readonly]{opacity:.85}
   $("btnAgain").addEventListener("click", function(){ start(shuffle(session.errors.slice())); });
   $("btnReset").addEventListener("click", function(){ $("confirmReset").classList.remove("hidden"); });
   $("resetNo").addEventListener("click", function(){ $("confirmReset").classList.add("hidden"); });
-  $("resetYes").addEventListener("click", function(){ state={s:{},days:{},off:[]}; save(); $("confirmReset").classList.add("hidden"); renderHome(); });
+  $("resetYes").addEventListener("click", function(){ state=normalize({mode:state.mode}); save(); $("confirmReset").classList.add("hidden"); renderHome(); });
   $("btnCheck").addEventListener("click", function(){ checkOpen(false); });
   $("btnDontKnow").addEventListener("click", function(){ checkOpen(true); });
   $("openInput").addEventListener("keydown", function(ev){
@@ -811,6 +908,12 @@ textarea.answer[readonly]{opacity:.85}
     var cur=session.list[session.i];
     if(cur && cur.open){
       if(session.answered && ev.key==="Enter" && document.activeElement && document.activeElement.id==="btnNext"){ /* bouton natif */ }
+      return;
+    }
+    if(session.multi){
+      if(!session.answered && /^[1-4]$/.test(ev.key)){ toggleSel(+ev.key-1); ev.preventDefault(); }
+      else if(!session.answered && ev.key==="Enter" && session.sel.some(Boolean)){ validateMulti(); ev.preventDefault(); }
+      else if(session.answered && ev.key==="Enter" && document.activeElement && document.activeElement.id!=="btnQuit"){ next(); ev.preventDefault(); }
       return;
     }
     if(!session.answered && /^[1-4]$/.test(ev.key)){ answer(+ev.key-1); ev.preventDefault(); }
