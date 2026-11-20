@@ -136,8 +136,32 @@ textarea.answer[readonly]{opacity:.85}
 .stat b span{font-size:inherit;color:inherit;display:inline}
 .flame{display:inline-block;margin-left:4px;transform-origin:bottom center}
 .badge{display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:var(--good-soft);color:var(--good);border:1px solid var(--good);border-radius:999px;padding:4px 12px;font-weight:700;font-size:.9rem}
-#toast{position:fixed;left:50%;top:16px;width:max-content;transform:translateX(-50%);z-index:50;max-width:min(92vw,460px);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:14px;font-weight:700;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:toastIn .3s ease-out}
+#toast{position:fixed;left:50%;top:16px;width:max-content;transform:translateX(-50%);z-index:70;max-width:min(92vw,460px);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:14px;font-weight:700;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.18);animation:toastIn .3s ease-out}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:40}
+.cat svg{display:block;width:100%;height:auto;overflow:visible}
+.cat .tail{transform-box:view-box;transform-origin:182px 1200px;animation:tail 2.6s ease-in-out infinite}
+.cat .breath{transform-box:view-box;transform-origin:609px 1690px;animation:breath 3.4s ease-in-out infinite}
+.cat .lid{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(0);animation:blink 5s infinite}
+.cat .lid.r{animation-delay:.03s}
+@keyframes tail{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes breath{0%,100%{transform:scale(1,1)}50%{transform:scale(1.012,1.02)}}
+@keyframes blink{0%,90%,100%{transform:scaleY(0)}93%,95%{transform:scaleY(1)}}
+@keyframes catIn{0%{transform:translateY(60px) scale(.5);opacity:0}100%{transform:none;opacity:1}}
+@keyframes hop{0%,100%{transform:translateY(0)}35%{transform:translateY(-16px)}60%{transform:translateY(0)}75%{transform:translateY(-5px)}}
+@keyframes bubbleIn{from{transform:scale(.7);opacity:0}to{transform:none;opacity:1}}
+.cat.arrive{animation:catIn .7s cubic-bezier(.3,1.5,.5,1) both}
+.cat.hop{animation:hop .6s ease-out}
+#catOverlay{position:fixed;inset:0;z-index:60;background:rgba(15,25,25,.5);display:flex;align-items:center;justify-content:center;padding:20px}
+#catOverlay.hidden{display:none}
+.catcard{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:360px;width:100%}
+.catcard .cat{width:min(58vw,230px)}
+.bubble{position:relative;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:14px 18px;font-weight:700;text-align:center;line-height:1.4;box-shadow:0 8px 24px rgba(0,0,0,.15);animation:bubbleIn .35s .45s ease-out both}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-9px;width:16px;height:16px;background:var(--card);border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateX(-50%) rotate(45deg)}
+.catmini-wrap{position:relative;flex:0 0 auto;align-self:flex-start}
+.cat.mini{width:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cat.mini:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:12px}
+.minibubble{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:max-content;max-width:min(70vw,260px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-weight:700;font-size:.92rem;box-shadow:0 6px 18px rgba(0,0,0,.14);animation:bubbleIn .25s ease-out both}
+.minibubble::before{content:"";position:absolute;right:24px;top:-7px;width:12px;height:12px;background:var(--card);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -156,11 +180,15 @@ textarea.answer[readonly]{opacity:.85}
     </div>
   </section>
   <section id="home">
-    <div class="row" style="justify-content:space-between">
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start;gap:12px">
       <div>
         <h1>QCM auxiliaire de puériculture</h1>
         <p class="muted" id="intro">Chargement des questions…</p>
         <span class="badge hidden" id="badge"></span>
+      </div>
+      <div class="catmini-wrap">
+        <div class="cat mini hidden" id="catMini" role="button" tabindex="0" aria-label="Le petit chat : touchez-le pour un message"></div>
+        <div class="minibubble hidden" id="catMiniMsg" role="status"></div>
       </div>
     </div>
 
@@ -290,6 +318,13 @@ textarea.answer[readonly]{opacity:.85}
   </section>
 </main>
 <div id="toastArea" aria-live="polite"></div>
+<div id="catOverlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="catMsg">
+  <div class="catcard">
+    <div class="bubble" id="catMsg"></div>
+    <div class="cat" id="catBig"></div>
+    <button type="button" class="primary" id="catGo">C'est parti !</button>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -438,6 +473,94 @@ textarea.answer[readonly]{opacity:.85}
     else { msg=pick(MSG.low); }
     $("endMsg").textContent=msg;
   }
+  // ---------- le petit chat ----------
+  var CAT = {
+    first:["Coucou mon cœur ! Voici ton QCM. Prête pour ta toute première séance ?"],
+    back:["Te revoilà mon chat ! On reprend tranquillement ?",
+          "Tu m'as manqué mon cœur ! Une petite séance pour se remettre dedans ?"],
+    streak:["Déjà {n} jours d'affilée mon cœur, continue comme ça !",
+            "{n} jours de suite, je suis fier de toi mon chat !"],
+    errors:["{n} questions t'attendent pour être revues mon chat, on s'en débarrasse ?"],
+    mon:["Nouvelle semaine mon cœur, on la commence en beauté ?"],
+    fri:["C'est vendredi mon chat ! Une dernière séance avant le week-end ?"],
+    wkend:["Même le week-end tu révises… tu es incroyable mon cœur !"],
+    day:["Bonjour mon chat ! Une petite séance et c'est gagné pour aujourd'hui.",
+         "Coucou mon cœur ! Prête pour ta séance du jour ?",
+         "Bonjour mon cœur ! Chaque séance te rapproche du diplôme.",
+         "Hello mon chat ! Aujourd'hui encore, tu vas assurer.",
+         "Coucou mon cœur, je crois en toi. On y va ?",
+         "Bonjour mon chat ! Quelques questions et tu peux être fière de toi."],
+    tap:["Miaou ! 🐾", "Courage mon cœur, tu gères !", "Allez mon chat, une petite séance ?", "Je suis fier de toi.", "Ronron…"],
+    done:["Séance faite aujourd'hui, bravo mon cœur !"]
+  };
+  var catAssets=null, miniTimer=null;
+  function loadCatAssets(){ return fetch("chat.bin").then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(function(b){ return decryptBuf(PASS, b); }); }
+  function catSVG(a){
+    var lid=function(e, cls){
+      var cx=e[0], cy=e[1], rx=e[2], ry=e[3];
+      return '<g class="lid '+cls+'"><ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="url(#lidg)"/>'+
+        '<path d="M'+(cx-rx*0.82)+' '+(cy+ry*0.15)+' Q'+cx+' '+(cy+ry*0.62)+' '+(cx+rx*0.82)+' '+(cy+ry*0.15)+'" fill="none" stroke="#2b1a10" stroke-width="14" stroke-linecap="round"/></g>';
+    };
+    return '<svg viewBox="0 0 '+a.w+' '+a.h+'" aria-hidden="true" focusable="false">'+
+      '<defs><linearGradient id="lidg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbd49e"/><stop offset="1" stop-color="#f9e6c8"/></linearGradient></defs>'+
+      '<g class="breath"><g class="tail"><image href="'+a.tail+'" width="'+a.w+'" height="'+a.h+'"/></g>'+
+      '<image href="'+a.body+'" width="'+a.w+'" height="'+a.h+'"/>'+
+      lid(a.eyes[0],"l")+lid(a.eyes[1],"r")+'</g></svg>';
+  }
+  function fill(s, n){ return s.replace("{n}", n); }
+  function catMessage(){
+    var keys=Object.keys(state.days).map(Number).filter(function(k){ return k!==today() && state.days[k]; }).sort();
+    var n=streak(), due=modePool().filter(function(q){ return isError(q.id); }).length;
+    var wd=new Date().getDay(), pool=[];
+    if(!keys.length && !state.days[today()]) pool=CAT.first;
+    else {
+      var last=keys[keys.length-1], gap=0;
+      if(last){
+        var ld=new Date(Math.floor(last/10000), Math.floor(last/100)%100-1, last%100), t=new Date(); t.setHours(0,0,0,0);
+        gap=Math.round((t-ld)/86400000);
+      }
+      if(gap>=3) pool=CAT.back;
+      else if(n>=2 && Math.random()<0.45) pool=CAT.streak.map(function(s){ return fill(s,n); });
+      else if(due>=5 && Math.random()<0.45) pool=CAT.errors.map(function(s){ return fill(s,due); });
+      else if(wd===1 && Math.random()<0.5) pool=CAT.mon;
+      else if(wd===5 && Math.random()<0.5) pool=CAT.fri;
+      else if((wd===0||wd===6) && Math.random()<0.5) pool=CAT.wkend;
+      else pool=CAT.day;
+    }
+    var choices=pool.filter(function(s){ return s!==state.catLast; });
+    return pick(choices.length?choices:pool);
+  }
+  function initCat(a){
+    catAssets=a;
+    var mini=$("catMini"); mini.innerHTML=catSVG(a); mini.classList.remove("hidden");
+    if(state.catDay!==today()){
+      var msg=catMessage();
+      state.catDay=today(); state.catLast=msg; save();
+      $("catMsg").textContent=msg;
+      var big=$("catBig"); big.innerHTML=catSVG(a); big.classList.add("arrive");
+      $("catOverlay").classList.remove("hidden");
+      setTimeout(function(){ $("catGo").focus({preventScroll:true}); }, 50);
+    }
+  }
+  function closeCat(){
+    var o=$("catOverlay"); if(o.classList.contains("hidden")) return;
+    o.classList.add("hidden"); $("catBig").innerHTML="";
+    var mini=$("catMini"); animate2(mini,"hop");
+  }
+  function animate2(el, cls){
+    if(REDUCED || !el) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  }
+  function tapCat(){
+    var b=$("catMiniMsg");
+    var pool = state.days[today()] && Math.random()<0.5 ? CAT.done : CAT.tap;
+    var choices=pool.filter(function(s){ return s!==b.textContent; });
+    b.textContent=pick(choices.length?choices:pool);
+    b.classList.remove("hidden"); b.style.animation="none"; void b.offsetWidth; b.style.animation="";
+    animate2($("catMini"),"hop");
+    clearTimeout(miniTimer); miniTimer=setTimeout(function(){ b.classList.add("hidden"); }, 2600);
+  }
+
   function streakStart(n){ return dayNum() - n + (state.days[today()] ? 1 : 0); }
   function homeCelebrations(){
     var n=streak(), fl=$("flame");
@@ -462,7 +585,7 @@ textarea.answer[readonly]{opacity:.85}
   function loadLocal(){
     try { var raw = localStorage.getItem(LS_KEY); if(raw){ var o=JSON.parse(raw); if(o && o.s) state = normalize(o); } } catch(e){}
   }
-  function normalize(o){ return { s:o.s||{}, days:o.days||{}, off:o.off||[], perfect:o.perfect||0, cel:o.cel||{}, mode:o.mode==="multi"?"multi":"single" }; }
+  function normalize(o){ return { s:o.s||{}, days:o.days||{}, off:o.off||[], perfect:o.perfect||0, cel:o.cel||{}, mode:o.mode==="multi"?"multi":"single", catDay:o.catDay||0, catLast:o.catLast||"" }; }
   function merge(a,b){ // garde l'entrée la plus avancée pour chaque question
     var out = normalize(JSON.parse(JSON.stringify(a)));
     Object.keys(b.s||{}).forEach(function(k){
@@ -472,6 +595,7 @@ textarea.answer[readonly]{opacity:.85}
     Object.keys(b.days||{}).forEach(function(k){ out.days[k]=Math.max(out.days[k]||0,b.days[k]); });
     if((b.off||[]).length && !(out.off||[]).length) out.off=b.off;
     out.perfect=Math.max(out.perfect||0, b.perfect||0);
+    if((b.catDay||0)>(out.catDay||0)){ out.catDay=b.catDay; out.catLast=b.catLast||""; }
     Object.keys(b.cel||{}).forEach(function(k){ if(!(k in out.cel)) out.cel[k]=b.cel[k]; });
     return out;
   }
@@ -884,6 +1008,11 @@ textarea.answer[readonly]{opacity:.85}
     state.mode=b.getAttribute("data-m")==="multi"?"multi":"single"; save(); renderHome();
   });
   $("btnValidate").addEventListener("click", validateMulti);
+  $("catGo").addEventListener("click", closeCat);
+  $("catOverlay").addEventListener("click", function(ev){ if(ev.target===this) closeCat(); });
+  document.addEventListener("keydown", function(ev){ if(ev.key==="Escape") closeCat(); });
+  $("catMini").addEventListener("click", tapCat);
+  $("catMini").addEventListener("keydown", function(ev){ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); tapCat(); } });
   $("btnDaily").addEventListener("click", function(){ start(buildDaily(size)); });
   $("btnRandom").addEventListener("click", function(){ start(buildRandom(size)); });
   $("btnErrors").addEventListener("click", function(){
@@ -930,8 +1059,9 @@ textarea.answer[readonly]{opacity:.85}
   function b64url(bytes){ var s=""; for(var i=0;i<bytes.length;i+=0x8000){ s+=String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); } return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
   function unb64url(str){ str=str.replace(/-/g,"+").replace(/_/g,"/"); while(str.length%4) str+="="; var b=atob(str), u=new Uint8Array(b.length); for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
   function pipe(bytes, stream){ return new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer().then(function(b){ return new Uint8Array(b); }); }
-  function decrypt(pass){
-    var buf=new Uint8Array(BIN), salt=buf.slice(0,16), iv=buf.slice(16,28), ct=buf.slice(28);
+  function decrypt(pass){ return decryptBuf(pass, BIN); }
+  function decryptBuf(pass, ab){
+    var buf=new Uint8Array(ab), salt=buf.slice(0,16), iv=buf.slice(16,28), ct=buf.slice(28);
     return crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]).then(function(base){
       return crypto.subtle.deriveKey({name:"PBKDF2", salt:salt, iterations:200000, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
     }).then(function(key){ return crypto.subtle.decrypt({name:"AES-GCM", iv:iv}, key, ct); })
@@ -954,7 +1084,7 @@ textarea.answer[readonly]{opacity:.85}
   function init(data){
     ingest(data);
     var p=hashParams().p;
-    (p ? importFromHash(p) : Promise.resolve()).then(function(){ cleanHash(); show("home"); renderHome(); });
+    (p ? importFromHash(p) : Promise.resolve()).then(function(){ cleanHash(); show("home"); renderHome(); loadCatAssets().then(initCat).catch(function(){}); });
   }
   function tryPass(pass){
     return decrypt(pass).then(function(data){
