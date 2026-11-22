@@ -525,9 +525,19 @@ textarea.answer[readonly]{opacity:.85}
   }
   // ---------- fiches ----------
   var PACKS={}, fvTheme=null, fvMode=null, fvZoom=0, preTheme=null;
-  function loadFichePack(id){
+  var FMANIFEST=null;
+  function loadFichePages(id){
     return fetch("fiches/fiche-"+id+".bin").then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-      .then(function(b){ return decryptBytes(PASS, b); });
+      .then(function(b){ return decryptBytes(PASS, b); }).then(parsePack);
+  }
+  function unusedManifestPages(id){
+    FMANIFEST = FMANIFEST || fetch("fiches/index.json").then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); });
+    return FMANIFEST.then(function(m){
+      var n=m[id]||0, a=[];
+      for(var i=1;i<=n;i++) a.push("fiches/"+id+"/p"+(i<10?"0":"")+i+".webp");
+      if(!n) throw new Error("absente");
+      return a;
+    }).catch(function(e){ FMANIFEST=null; throw e; });
   }
   function parsePack(u8){
     var dv=new DataView(u8.buffer, u8.byteOffset, u8.byteLength), n=dv.getUint32(0,true), off=4+4*n, urls=[];
@@ -540,7 +550,7 @@ textarea.answer[readonly]{opacity:.85}
   }
   function getPages(id){
     if(PACKS[id]) return PACKS[id];
-    PACKS[id]=loadFichePack(id).then(parsePack).catch(function(e){ delete PACKS[id]; throw e; });
+    PACKS[id]=loadFichePages(id).catch(function(e){ delete PACKS[id]; throw e; });
     return PACKS[id];
   }
   function themeById(id){ for(var i=0;i<THEMES.length;i++) if(THEMES[i].id===id) return THEMES[i]; return null; }
