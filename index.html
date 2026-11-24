@@ -71,6 +71,35 @@ button:focus-visible,.opt:focus-visible{outline:3px solid var(--accent);outline-
 @media (max-width:560px){.trow{grid-template-columns:1fr 70px 44px}}
 .trow{grid-template-columns:auto 1fr 120px 52px}
 @media (max-width:560px){.trow{grid-template-columns:auto 1fr 64px 44px}}
+.exbox{display:flex;flex-direction:column;gap:12px}
+.exnote{margin:0;color:var(--accent);font-weight:700;font-size:.92rem}
+.exopts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.exopts li{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+.exopts li b{display:inline-block;min-width:1.6em;color:var(--accent)}
+.exans{border-left:5px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.exans p{margin:0}
+.grade{display:flex;gap:8px;flex-wrap:wrap}
+.grade button{flex:1;min-width:30%;font-weight:700}
+.grade .g-ok{border-color:var(--good);color:var(--good)}
+.grade .g-mid{border-color:#c98a1b;color:#a86d0c}
+.grade .g-ko{border-color:var(--bad);color:var(--bad)}
+.oralcard .row{gap:10px}
+.chk{display:flex;align-items:center;gap:8px;font-size:.95rem}
+.chk input{width:20px;height:20px;accent-color:var(--accent)}
+.jtimer{font-family:var(--display);font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums;padding:4px 14px;border-radius:12px;background:var(--card);border:2px solid var(--line);transition:background .4s,border-color .4s,color .4s}
+.jtimer.warn{border-color:#c98a1b;color:#a86d0c;background:#fff4dd}
+.jtimer.over{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.jlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.jlist button{width:100%;text-align:left;display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);font:inherit;color:var(--ink);cursor:pointer}
+.jlist button .box{flex:0 0 22px;height:22px;border-radius:6px;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.jlist button[aria-checked="true"]{border-color:var(--good);background:var(--good-soft)}
+.jlist button[aria-checked="true"] .box{background:var(--good);border-color:var(--good)}
+details.relances{border:1px dashed var(--line);border-radius:12px;padding:10px 12px}
+details.relances summary{cursor:pointer;font-weight:700;color:var(--accent)}
+details.relances .rl{margin:10px 0 0}
+details.relances .rl b{display:block}
+.jres{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;background:var(--card)}
+.jres .miss{color:var(--muted);font-size:.92rem}
 .fbtn{border:1px solid var(--line);background:var(--card);border-radius:10px;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;padding:0}
 .fbtn:hover{border-color:var(--accent)}
 .linkbtn{background:none;border:none;color:var(--accent);font:inherit;font-weight:700;padding:6px 0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
@@ -252,6 +281,32 @@ textarea.answer[readonly]{opacity:.85}
       </div>
     </div>
 
+    <div class="card oralcard" style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+      <h2>Entraînement à l'oral</h2>
+      <p class="muted" style="margin:0">À deux, sur ce téléphone : une personne tient le téléphone et pose les questions, l'autre répond à voix haute.</p>
+      <div class="row">
+        <button type="button" class="primary" id="btnExam">🎤 Je l'interroge</button>
+        <label class="chk"><input type="checkbox" id="exShowOpts"> Lire aussi les propositions</label>
+      </div>
+      <p class="muted" style="margin:0">Questions de la séance du jour (thèmes et mode choisis plus haut). La réponse reste cachée jusqu'à ce que vous la demandiez.</p>
+      <hr style="border:none;border-top:1px solid var(--line);margin:4px 0">
+      <div class="row">
+        <button type="button" class="primary" id="btnJury">⚖️ Mode jury</button>
+      </div>
+      <div class="row seg" role="group" aria-label="Nombre de questions du jury" id="jurySize">
+        <span class="muted">Questions :</span>
+        <button type="button" data-n="5" aria-pressed="true">5</button>
+        <button type="button" data-n="10">10</button>
+      </div>
+      <div class="row seg" role="group" aria-label="Sujets du jury" id="jurySrc">
+        <span class="muted">Sur :</span>
+        <button type="button" data-s="all" aria-pressed="true">Tout</button>
+        <button type="button" data-s="livret">Son livret 2</button>
+        <button type="button" data-s="fiches">Les fiches</button>
+      </div>
+      <p class="muted" style="margin:0">Vous jouez le jury : posez la question, cochez les éléments qu'elle cite, utilisez les relances si besoin. Chrono : 3 minutes par question.</p>
+    </div>
+
     <div class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
       <div class="row" style="justify-content:space-between">
         <h2>Thèmes</h2>
@@ -320,10 +375,59 @@ textarea.answer[readonly]{opacity:.85}
         <button type="button" id="btnDontKnow">Je ne sais pas</button>
       </div>
     </div>
+    <div id="exBox" class="exbox hidden">
+      <p class="exnote" id="exNote">Lisez la question à voix haute.</p>
+      <ul class="exopts hidden" id="exOpts"></ul>
+      <div class="row"><button type="button" class="primary" id="exReveal">👀 Voir la réponse</button></div>
+      <div class="exans hidden" id="exAns"></div>
+      <div class="grade hidden" id="exGrade">
+        <button type="button" class="g-ok" id="gOk">✓ Juste</button>
+        <button type="button" class="g-mid" id="gMid">≈ À moitié</button>
+        <button type="button" class="g-ko" id="gKo">✗ À revoir</button>
+      </div>
+    </div>
     <div id="fb" class="feedback hidden" aria-live="polite"></div>
     <div class="row" style="justify-content:space-between">
       <span class="keys" id="keysHint">Clavier : 1 à 4 pour répondre, Entrée pour continuer</span>
       <button type="button" class="primary hidden" id="btnNext">Question suivante</button>
+    </div>
+  </section>
+
+  <section id="jury" class="hidden" style="flex-direction:column;gap:14px">
+    <div class="qhead">
+      <button type="button" class="ghost" id="jQuit">← Arrêter</button>
+      <span class="muted" id="jCount" style="font-variant-numeric:tabular-nums">1 / 5</span>
+    </div>
+    <div class="progress"><i id="jBar" style="width:0%"></i></div>
+    <div id="jRun" style="display:flex;flex-direction:column;gap:14px">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <span class="tag" id="jSrc"></span>
+        <div class="row" style="gap:8px;align-items:center">
+          <span class="jtimer" id="jTimer" aria-live="off">0:00</span>
+          <button type="button" class="ghost" id="jPause" aria-label="Mettre le chrono en pause">⏸</button>
+        </div>
+      </div>
+      <p class="exnote" style="margin:0">Question du jury, à lire à voix haute :</p>
+      <p class="qtext" id="jText"></p>
+      <div>
+        <h3 style="margin:0 0 8px">Ce que le jury attend <span class="muted" style="font-weight:400;font-size:.9rem">(cochez ce qu'elle cite)</span></h3>
+        <ul class="jlist" id="jList"></ul>
+      </div>
+      <details class="relances" id="jRel"><summary>Relances possibles</summary><div id="jRelBox"></div></details>
+      <div class="row" style="justify-content:flex-end"><button type="button" class="primary" id="jNext">Question suivante</button></div>
+    </div>
+    <div id="jEnd" class="hidden" style="flex-direction:column;gap:14px">
+      <h2 style="margin:0">Bilan de l'oral</h2>
+      <div class="card" style="display:flex;flex-direction:column;gap:10px">
+        <div class="row" style="gap:16px;align-items:center"><div class="big" id="jScore">0 %</div><p id="jSum" style="margin:0"></p></div>
+        <div class="bar endbar"><i id="jScoreBar"></i></div>
+      </div>
+      <div id="jFiches" class="row"></div>
+      <div id="jRes" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div class="row">
+        <button type="button" class="primary" id="jAgain">Nouvel oral</button>
+        <button type="button" id="jHome">Retour à l'accueil</button>
+      </div>
     </div>
   </section>
 
@@ -614,6 +718,178 @@ textarea.answer[readonly]{opacity:.85}
     $("prioText").textContent="« "+best.t+" » : "+bestN+(bestN>1?" questions ratées à revoir.":" question ratée à revoir.");
   }
 
+  // ---------- « Je l'interroge » ----------
+  function renderExam(q, st){
+    st.className="pill"; st.textContent= q.open ? "Oral · réponse libre" : (q.multi ? "Oral · plusieurs réponses" : "Oral");
+    ["opts","openBox","validateRow","multiHint"].forEach(function(id){ $(id).classList.add("hidden"); });
+    $("opts").innerHTML="";
+    $("keysHint").textContent="";
+    var box=$("exBox"); box.classList.remove("hidden");
+    var ul=$("exOpts"); ul.innerHTML="";
+    var showOpts = session.showOpts && !q.open;
+    $("exNote").textContent = showOpts ? "Lisez la question puis les propositions à voix haute." : "Lisez la question à voix haute : elle répond de tête.";
+    if(showOpts){
+      var opts = q.multi ? shuffle(q.o.map(function(x){ return {t:x[0]}; })) : shuffle([{t:q.c}].concat(q.w.map(function(w){ return {t:w}; })));
+      opts.forEach(function(o,i){ var li=document.createElement("li"); var b=document.createElement("b"); b.textContent="ABCD"[i]; li.appendChild(b); li.appendChild(document.createTextNode(" "+o.t)); ul.appendChild(li); });
+      if(q.multi){ var li=document.createElement("li"); li.style.border="none"; li.style.padding="0"; li.className="muted"; li.textContent="(Une ou plusieurs bonnes réponses.)"; ul.appendChild(li); }
+      ul.classList.remove("hidden");
+    } else ul.classList.add("hidden");
+    $("exReveal").classList.remove("hidden");
+    $("exAns").classList.add("hidden"); $("exAns").innerHTML="";
+    $("exGrade").classList.add("hidden");
+  }
+  function revealExam(){
+    var q=session.list[session.i], a=$("exAns"); a.innerHTML="";
+    var h=document.createElement("strong"); h.textContent = q.multi ? "Bonnes réponses :" : (q.open ? "Réponse attendue :" : "Bonne réponse :");
+    var m=document.createElement("p"); m.style.fontWeight="700"; m.textContent=goodText(q);
+    a.appendChild(h); a.appendChild(m);
+    if(q.open){
+      var t=document.createElement("p"); t.className="muted"; t.textContent="Points clés à entendre :";
+      var ul=document.createElement("ul"); ul.style.margin="0"; ul.style.paddingLeft="20px";
+      q.p.forEach(function(x){ var li=document.createElement("li"); li.textContent=x[0]; ul.appendChild(li); });
+      a.appendChild(t); a.appendChild(ul);
+    } else if(q.e){
+      var e=document.createElement("p"); e.className="muted"; e.textContent=q.e; a.appendChild(e);
+    }
+    a.classList.remove("hidden");
+    $("exReveal").classList.add("hidden");
+    $("exGrade").classList.remove("hidden");
+    $("gOk").focus({preventScroll:true});
+    a.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+  function gradeExam(level){
+    if(session.answered) return;
+    session.answered=true;
+    var q=session.list[session.i], ok = level==="ok";
+    record(q, ok);
+    $("exGrade").classList.add("hidden");
+    var fb=$("fb"); fb.innerHTML=""; fb.className="feedback"+(ok?"":" bad");
+    var s=document.createElement("strong");
+    s.textContent = ok ? "✓ Noté juste : la question reviendra plus tard." : (level==="mid" ? "≈ Noté à moitié : la question reviendra demain." : "✗ Noté à revoir : la question reviendra demain.");
+    fb.appendChild(s);
+    if(!ok) fb.appendChild(ficheLink(q));
+    var n=$("btnNext"); n.classList.remove("hidden");
+    n.textContent = session.i+1<session.list.length ? "Question suivante" : "Voir le résultat";
+    n.focus({preventScroll:true});
+  }
+
+  // ---------- mode Jury ----------
+  var JURY=null, jsess=null, jTick=null, jurySize=5, jurySrc="all";
+  function loadJury(){ return fetch("jury.bin").then(function(r){ if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(function(b){ return decryptBufJSON(PASS, b); }); }
+  function getJury(){ JURY = JURY || loadJury().catch(function(e){ JURY=null; throw e; }); return JURY; }
+  function pickJury(items, n){
+    var pool=items.filter(function(x){
+      return jurySrc==="all" || (jurySrc==="livret" ? x.s.charAt(0)==="L" : x.s.charAt(0)!=="L");
+    });
+    var seen=state.jury||{};
+    pool=shuffle(pool.slice()).sort(function(a,b){
+      var A=seen[a.id], B=seen[b.id];
+      if(!A && B) return -1; if(A && !B) return 1; if(!A && !B) return 0;
+      if(A[0]!==B[0]) return A[0]-B[0];
+      return (A[1]||0)-(B[1]||0);
+    });
+    var list=pool.slice(0,n);
+    // la présentation passe toujours en premier si elle est tirée
+    list.sort(function(a,b){ return (a.s==="L0"?-1:0)-(b.s==="L0"?-1:0); });
+    return list;
+  }
+  function startJury(){
+    getJury().then(function(data){
+      var list=pickJury(data.items, jurySize);
+      if(!list.length) return;
+      jsess={ list:list, i:0, res:[], src:data.src };
+      $("jRun").classList.remove("hidden"); $("jRun").style.display="flex";
+      $("jEnd").classList.add("hidden");
+      show("jury"); renderJury();
+    }).catch(function(){ toast("Les questions du jury n'ont pas pu être chargées."); });
+  }
+  function fmt(s){ var m=Math.floor(s/60), r=Math.floor(s%60); return m+":"+(r<10?"0":"")+r; }
+  function startTimer(){
+    clearInterval(jTick);
+    jsess.t0=Date.now(); jsess.paused=0; jsess.pauseAt=0;
+    $("jPause").textContent="⏸"; $("jPause").setAttribute("aria-label","Mettre le chrono en pause");
+    var el=$("jTimer"); el.className="jtimer"; el.textContent="0:00";
+    jTick=setInterval(function(){
+      if(jsess.pauseAt) return;
+      var s=(Date.now()-jsess.t0-jsess.paused)/1000;
+      el.textContent=fmt(s);
+      el.className="jtimer"+(s>=180?" over":(s>=120?" warn":""));
+    }, 250);
+  }
+  function elapsed(){ var now=jsess.pauseAt||Date.now(); return Math.round((now-jsess.t0-jsess.paused)/1000); }
+  function renderJury(){
+    var it=jsess.list[jsess.i], n=jsess.list.length;
+    $("jCount").textContent=(jsess.i+1)+" / "+n;
+    $("jBar").style.width=(jsess.i*100/n)+"%";
+    $("jSrc").textContent=jsess.src[it.s] || ("Fiche : "+((themeById(it.s)||{}).t||""));
+    $("jText").textContent=it.q;
+    var ul=$("jList"); ul.innerHTML="";
+    jsess.checked=it.a.map(function(){ return false; });
+    it.a.forEach(function(x,i){
+      var li=document.createElement("li"), b=document.createElement("button");
+      b.type="button"; b.setAttribute("role","checkbox"); b.setAttribute("aria-checked","false");
+      var bx=document.createElement("span"); bx.className="box"; bx.setAttribute("aria-hidden","true");
+      var tx=document.createElement("span"); tx.textContent=x;
+      b.appendChild(bx); b.appendChild(tx);
+      b.addEventListener("click", function(){
+        jsess.checked[i]=!jsess.checked[i];
+        b.setAttribute("aria-checked", jsess.checked[i]?"true":"false"); bx.textContent=jsess.checked[i]?"✓":"";
+      });
+      li.appendChild(b); ul.appendChild(li);
+    });
+    var rb=$("jRelBox"); rb.innerHTML=""; $("jRel").open=false;
+    $("jRel").classList.toggle("hidden", !it.r.length);
+    it.r.forEach(function(r){
+      var d=document.createElement("div"); d.className="rl";
+      var q=document.createElement("b"); q.textContent="« "+r[0]+" »";
+      var a=document.createElement("span"); a.className="muted"; a.textContent=r[1];
+      d.appendChild(q); d.appendChild(a); rb.appendChild(d);
+    });
+    $("jNext").textContent = jsess.i+1<n ? "Question suivante" : "Voir le bilan";
+    window.scrollTo(0,0);
+    startTimer();
+  }
+  function nextJury(){
+    var it=jsess.list[jsess.i], got=jsess.checked.filter(Boolean).length, pct=Math.round(got*100/it.a.length);
+    jsess.res.push({ it:it, got:got, pct:pct, t:elapsed(), miss:it.a.filter(function(_,i){ return !jsess.checked[i]; }) });
+    state.jury=state.jury||{}; state.jury[it.id]=[pct, dayNum()]; save();
+    jsess.i++;
+    if(jsess.i<jsess.list.length) renderJury(); else endJury();
+  }
+  function endJury(){
+    clearInterval(jTick);
+    $("jRun").classList.add("hidden"); var e=$("jEnd"); e.classList.remove("hidden"); e.style.display="flex";
+    $("jBar").style.width="100%"; $("jCount").textContent="Bilan";
+    var tot=0, got=0, time=0;
+    jsess.res.forEach(function(r){ tot+=r.it.a.length; got+=r.got; time+=r.t; });
+    var pct=tot?Math.round(got*100/tot):0;
+    $("jScore").textContent=pct+" %";
+    var bar=$("jScoreBar"); bar.style.transition="none"; bar.style.width="0"; void bar.offsetWidth; bar.style.transition=""; requestAnimationFrame(function(){ bar.style.width=pct+"%"; });
+    $("jSum").textContent=got+" éléments attendus cités sur "+tot+", en "+fmt(time)+" au total ("+fmt(time/jsess.res.length)+" en moyenne par question).";
+    var fz=$("jFiches"); fz.innerHTML=""; var done={};
+    jsess.res.forEach(function(r){
+      var f=r.it.f; if(!f || r.pct>=70 || done[f]) return; done[f]=1;
+      var t=themeById(f); if(!t) return;
+      var b=document.createElement("button"); b.type="button"; b.textContent="📖 Relire « "+t.t+" »";
+      b.addEventListener("click", function(){ openFiche(f, "home"); });
+      fz.appendChild(b);
+    });
+    var box=$("jRes"); box.innerHTML="";
+    jsess.res.forEach(function(r, i){
+      var d=document.createElement("div"); d.className="jres";
+      var q=document.createElement("strong"); q.textContent=(i+1)+". "+r.it.q;
+      var s=document.createElement("span"); s.textContent=r.got+" / "+r.it.a.length+" éléments cités · "+fmt(r.t);
+      d.appendChild(q); d.appendChild(s);
+      if(r.miss.length){
+        var m=document.createElement("div"); m.className="miss"; m.textContent="À retravailler : "+r.miss.join(" · ");
+        d.appendChild(m);
+      }
+      box.appendChild(d);
+    });
+    window.scrollTo(0,0);
+  }
+  function quitJury(){ clearInterval(jTick); jsess=null; show("home"); renderHome(); }
+
   // ---------- le petit chat ----------
   var CAT = {
     first:["Coucou mon cœur ! Voici ton QCM. Prête pour ta toute première séance ?"],
@@ -726,7 +1002,7 @@ textarea.answer[readonly]{opacity:.85}
   function loadLocal(){
     try { var raw = localStorage.getItem(LS_KEY); if(raw){ var o=JSON.parse(raw); if(o && o.s) state = normalize(o); } } catch(e){}
   }
-  function normalize(o){ return { s:o.s||{}, days:o.days||{}, off:o.off||[], perfect:o.perfect||0, cel:o.cel||{}, mode:o.mode==="multi"?"multi":"single", catDay:o.catDay||0, catLast:o.catLast||"" }; }
+  function normalize(o){ return { s:o.s||{}, days:o.days||{}, off:o.off||[], perfect:o.perfect||0, cel:o.cel||{}, mode:o.mode==="multi"?"multi":"single", catDay:o.catDay||0, catLast:o.catLast||"", jury:o.jury||{} }; }
   function merge(a,b){ // garde l'entrée la plus avancée pour chaque question
     var out = normalize(JSON.parse(JSON.stringify(a)));
     Object.keys(b.s||{}).forEach(function(k){
@@ -737,6 +1013,8 @@ textarea.answer[readonly]{opacity:.85}
     if((b.off||[]).length && !(out.off||[]).length) out.off=b.off;
     out.perfect=Math.max(out.perfect||0, b.perfect||0);
     if((b.catDay||0)>(out.catDay||0)){ out.catDay=b.catDay; out.catLast=b.catLast||""; }
+    out.jury=out.jury||{};
+    Object.keys(b.jury||{}).forEach(function(k){ var x=b.jury[k], y=out.jury[k]; if(!y || (x[1]||0)>(y[1]||0)) out.jury[k]=x; });
     Object.keys(b.cel||{}).forEach(function(k){ if(!(k in out.cel)) out.cel[k]=b.cel[k]; });
     return out;
   }
@@ -916,13 +1194,13 @@ textarea.answer[readonly]{opacity:.85}
     }
     return shuffle(list);
   }
-  function start(list){
+  function start(list, examiner){
     if(!list.length) return;
-    session={ list:list, i:0, ok:0, errors:[], combo:0, multi: state.mode==="multi" };
+    session={ list:list, i:0, ok:0, errors:[], combo:0, multi: state.mode==="multi", examiner: !!examiner, showOpts: $("exShowOpts").checked };
     show("quiz"); renderQ();
   }
   function show(id){
-    ["lock","home","quiz","end"].forEach(function(s){ $(s).classList.toggle("hidden", s!==id); });
+    ["lock","home","quiz","end","jury"].forEach(function(s){ $(s).classList.toggle("hidden", s!==id); });
     $(id).style.display = id==="home" ? "" : "flex";
     window.scrollTo(0,0);
   }
@@ -938,6 +1216,8 @@ textarea.answer[readonly]{opacity:.85}
     $("qText").textContent=q.q;
     $("fb").classList.add("hidden"); $("btnNext").classList.add("hidden");
     session.answered=false;
+    $("exBox").classList.add("hidden");
+    if(session.examiner){ renderExam(q, st); return; }
     if(q.open){
       st.className="pill open"; st.textContent = !e ? "Réponse libre · nouvelle" : (e[0]<=1 && e[3]>0 ? "Réponse libre · déjà ratée" : "Réponse libre");
       $("opts").innerHTML=""; $("opts").classList.add("hidden");
@@ -1159,6 +1439,29 @@ textarea.answer[readonly]{opacity:.85}
   $("btnValidate").addEventListener("click", validateMulti);
   $("catGo").addEventListener("click", closeCat);
   $("fvClose").addEventListener("click", closeFiche);
+  $("btnExam").addEventListener("click", function(){ start(buildDaily(size), true); });
+  $("exReveal").addEventListener("click", revealExam);
+  $("gOk").addEventListener("click", function(){ gradeExam("ok"); });
+  $("gMid").addEventListener("click", function(){ gradeExam("mid"); });
+  $("gKo").addEventListener("click", function(){ gradeExam("ko"); });
+  $("btnJury").addEventListener("click", startJury);
+  $("jurySize").addEventListener("click", function(ev){
+    var b=ev.target.closest("button"); if(!b) return; jurySize=+b.getAttribute("data-n");
+    Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.setAttribute("aria-pressed", x===b?"true":"false"); });
+  });
+  $("jurySrc").addEventListener("click", function(ev){
+    var b=ev.target.closest("button"); if(!b) return; jurySrc=b.getAttribute("data-s");
+    Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){ x.setAttribute("aria-pressed", x===b?"true":"false"); });
+  });
+  $("jNext").addEventListener("click", nextJury);
+  $("jQuit").addEventListener("click", quitJury);
+  $("jHome").addEventListener("click", quitJury);
+  $("jAgain").addEventListener("click", startJury);
+  $("jPause").addEventListener("click", function(){
+    if(!jsess) return;
+    if(jsess.pauseAt){ jsess.paused+=Date.now()-jsess.pauseAt; jsess.pauseAt=0; this.textContent="⏸"; this.setAttribute("aria-label","Mettre le chrono en pause"); }
+    else { jsess.pauseAt=Date.now(); this.textContent="▶"; this.setAttribute("aria-label","Reprendre le chrono"); }
+  });
   $("fvBack").addEventListener("click", closeFiche);
   $("fvTrain").addEventListener("click", function(){ var id=fvTheme; closeFiche(); startTheme(id); });
   $("fvZoom").addEventListener("click", function(){
@@ -1189,7 +1492,7 @@ textarea.answer[readonly]{opacity:.85}
   $("btnNext").addEventListener("click", next);
   $("btnQuit").addEventListener("click", function(){ session=null; show("home"); renderHome(); });
   $("btnHome").addEventListener("click", function(){ session=null; show("home"); renderHome(); });
-  $("btnAgain").addEventListener("click", function(){ start(shuffle(session.errors.slice())); });
+  $("btnAgain").addEventListener("click", function(){ start(shuffle(session.errors.slice()), session.examiner); });
   $("btnReset").addEventListener("click", function(){ $("confirmReset").classList.remove("hidden"); });
   $("resetNo").addEventListener("click", function(){ $("confirmReset").classList.add("hidden"); });
   $("resetYes").addEventListener("click", function(){ state=normalize({mode:state.mode}); save(); $("confirmReset").classList.add("hidden"); renderHome(); });
@@ -1201,6 +1504,10 @@ textarea.answer[readonly]{opacity:.85}
   document.addEventListener("keydown", function(ev){
     if($("quiz").classList.contains("hidden") || !session) return;
     if(!$("ficheView").classList.contains("hidden") || !$("preFiche").classList.contains("hidden")) return;
+    if(session.examiner){
+      if(session.answered && ev.key==="Enter" && document.activeElement && document.activeElement.id==="btnNext"){ next(); ev.preventDefault(); }
+      return;
+    }
     var cur=session.list[session.i];
     if(cur && cur.open){
       if(session.answered && ev.key==="Enter" && document.activeElement && document.activeElement.id==="btnNext"){ /* bouton natif */ }
